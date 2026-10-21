@@ -15,6 +15,26 @@ const OFFICIAL_EX = 'https://meyda.education.gov.il/files/gifted/test-shlav2-exa
 const OFFICIAL_ANS = 'https://meyda.education.gov.il/files/gifted/test-shlav2-example-answers.pdf'
 const DISCLAIMER = 'לא קשור למשרד החינוך. תרגול בלבד. לא מבטיח הצלחה במבחן.'
 const PRIVACY = 'שום מידע לא נשלח לשום מקום. אין הרשמה, אין פרסומות ואין מעקב. כל ההתקדמות נשמרת רק במכשיר הזה.'
+const WA = 'https://chat.whatsapp.com/H6L5jeHPNT0AmgmK83oZ8M'
+const WA_NOTE = 'שימו לב: מי שמצטרף לקבוצת הוואטסאפ, חברי הקבוצה רואים את מספר הטלפון שלו. האתר עצמו לא אוסף שום מידע.'
+function toast(t: string): void {
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d)
+  setTimeout(() => d.remove(), 2600)
+}
+async function copyText(t: string): Promise<void> {
+  try { await navigator.clipboard.writeText(t) } catch {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove()
+  }
+}
+let fbItem: GItem | null = null
+function bindFeedback(): void {
+  app.querySelector('#fbBtn')?.addEventListener('click', async () => {
+    if (!fbItem) return
+    await copyText(`[${fbItem.id} · ${GTYPE_META[fbItem.type].title}] ${fbItem.plain}\nfeedback: `)
+    toast('הועתק — הדביקו בקבוצה')
+    setTimeout(() => window.open(WA, '_blank', 'noopener'), 900)
+  })
+}
 const label = (t: string) => (t.startsWith('g:') ? GTYPE_META[t.slice(2) as GType]?.title || t : t)
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!))
 
@@ -78,8 +98,10 @@ function startPractice(t: GType | 'mixed'): void {
   go('practice')
 }
 function itemHtml(it: GItem): string {
+  fbItem = it
   return `<div class="qcard gcard"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div>
-  <div class="opt-grid g-opts">${it.options.map((o, i) => `<button type="button" class="opt g-opt" data-i="${i}"><span class="g-letter">${'אבגד'[i]}.</span> <span class="g-optbody">${o}</span></button>`).join('')}</div></div>`
+  <div class="opt-grid g-opts">${it.options.map((o, i) => `<button type="button" class="opt g-opt" data-i="${i}"><span class="g-letter">${'אבגד'[i]}.</span> <span class="g-optbody">${o}</span></button>`).join('')}</div></div>
+  <button type="button" class="fb-btn" id="fbBtn">💬 פידבק על השאלה</button><p class="fb-note">${WA_NOTE}</p>`
 }
 function renderPractice(): void {
   const it = items[qi]
@@ -89,6 +111,7 @@ function renderPractice(): void {
     ${attempts > 0 ? `<p class="note">ניסיון ${attempts + 1} מתוך 3</p>` : ''}
     <div id="qhost">${itemHtml(it)}</div><div class="msg" id="msg"></div>
     <button class="ghost" id="btnStop">סיום</button>`)
+  bindFeedback()
   app.querySelectorAll<HTMLButtonElement>('.g-opt').forEach((b) => b.addEventListener('click', () => answer(Number(b.dataset.i))))
   app.querySelector('#btnStop')!.addEventListener('click', () => { if (confirm('לסיים את התרגול עכשיו?')) (qi > 0 ? go('summary') : go('home')) })
 }
@@ -183,6 +206,7 @@ function renderExam(): void {
   if (ephase === 'q') {
     const ch = exam[ec]
     shell(`<div class="g-timer" id="gtimer">⏱ ${fmt(left())} לחלק הזה</div><p class="note">חלק ${ec + 1} מתוך 5 · שאלה ${eq + 1} מתוך ${ch.items.length}</p><div id="qhost">${itemHtml(ch.items[eq])}</div>`)
+    bindFeedback()
     app.querySelectorAll<HTMLButtonElement>('.g-opt').forEach((b) => b.addEventListener('click', () => {
       ch.ans[eq] = Number(b.dataset.i); ch.ms[eq] = Date.now() - qStart; qStart = Date.now(); eq++
       if (eq >= ch.items.length) nextCh(); else render()
@@ -245,6 +269,7 @@ function renderParent(): void {
     <h3>יומן תרגילים</h3><div id="xlog"></div>
     <div class="panel"><b>קוד הורים (לא חובה)</b><p class="note">${data.pin ? 'יש קוד. ' : 'אין קוד – כל אחד יכול להיכנס למסך הזה. '}הקוד נשמר רק במכשיר הזה.</p>
       <input id="npin" type="password" inputmode="numeric" maxlength="8" class="pin-in" placeholder="קוד חדש (4–8 ספרות)"/><button class="ghost" id="setpin">שמירת קוד</button>${data.pin ? '<button class="ghost" id="rmpin">ביטול הקוד</button>' : ''}</div>
+    <div class="panel"><b>יש לכם רעיון או מצאתם טעות?</b><a class="primary wa-link" id="waIdeas" href="${WA}" target="_blank" rel="noopener">💡 רעיונות ושיפורים — לקבוצת הוואטסאפ</a><p class="note">${WA_NOTE}</p></div>
     <button class="danger" id="wipe">מחיקת כל הנתונים מהמכשיר</button>
     <button class="ghost" id="back">→ חזרה</button>`)
   renderLogPanel(app.querySelector('#xlog')!, data.log, label)
@@ -259,7 +284,7 @@ function renderAbout(): void {
   <p><b>חשוב:</b> ${DISCLAIMER} האתר לא רשמי ואין לו שום קשר למשרד החינוך או לגוף שעורך את המבחן.</p>
   <p><b>פרטיות:</b> ${PRIVACY} אין שרת שאוסף נתונים, אין עוגיות מעקב ואין כלי ניתוח. אפשר למחוק הכול ממסך ההורים.</p>
   <p><b>מידע רשמי:</b> קישורים לאתר משרד החינוך: <a href="${OFFICIAL_DESC}" target="_blank" rel="noopener">תיאור המבחן</a> · <a href="${OFFICIAL_EX}" target="_blank" rel="noopener">מבחן לדוגמה</a> · <a href="${OFFICIAL_ANS}" target="_blank" rel="noopener">תשובות לדוגמה</a> (PDF)</p>
-  <p class="note">נבנה בהתנדבות על ידי MARINA. נמצאה טעות? נשמח לשמוע.</p></div>
+  <p class="note">נבנה בהתנדבות על ידי MARINA. נמצאה טעות? נשמח לשמוע ב<a href="${WA}" target="_blank" rel="noopener">קבוצת הוואטסאפ</a>.</p><p class="note">${WA_NOTE}</p></div>
   <button class="ghost" id="back">→ חזרה</button>`)
   app.querySelector('#back')!.addEventListener('click', () => go('home'))
 }

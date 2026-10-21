@@ -486,3 +486,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .pin-in{width:100%;font-size:20px;padding:10px;border-radius:12px;border:1px solid #ddd;margin:6px 0;text-align:center;box-sizing:border-box}
 .help-list li{margin:4px 0}
 .xlog-t{width:100%;border-collapse:collapse;margin:10px 0}.xlog-t td,.xlog-t th{border-bottom:1px solid #eee;padding:6px;text-align:right}
+.fb-btn{display:block;margin:10px auto 0;background:none;border:1px solid #e2d6cc;border-radius:20px;padding:6px 14px;font-size:13px;color:var(--muted);font-family:inherit;cursor:pointer}
+.fb-note{font-size:11px;color:var(--muted);text-align:center;margin:4px 0 0}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2b2340;color:#fff;padding:10px 18px;border-radius:20px;font-size:15px;z-index:99;box-shadow:0 6px 16px #0003}
+.wa-link{display:block;text-align:center;text-decoration:none;margin-top:8px}
