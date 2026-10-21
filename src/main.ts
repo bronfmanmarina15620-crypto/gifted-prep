@@ -22,6 +22,7 @@ const PRIVACY_FULL = `<ul class="land-ul">
       <li>🙅 אין הרשמה ואין פרסומות.</li>
       <li>🚫 אין כלים חיצוניים למעקב או לסטטיסטיקה (כמו Google Analytics), ואין עוגיות מעקב.</li>
       <li>🗑️ אפשר למחוק את כל הנתונים במסך ההורים.</li></ul>`
+const CALM = 'המבחן קשה בכוונה. אף אחד לא אמור לדעת הכול. מותר לנחש, ומה שחשוב זה לנסות.'
 const WA = 'https://chat.whatsapp.com/H6L5jeHPNT0AmgmK83oZ8M'
 const WA_NOTE = 'שימו לב: מי שמצטרף לקבוצת הוואטסאפ, חברי הקבוצה רואים את מספר הטלפון שלו. האתר עצמו לא שולח שום מידע.'
 function toast(t: string): void {
@@ -77,6 +78,7 @@ function renderLanding(): void {
     <div class="land">
     <h1 class="land-h">תרגול חינמי לשלב ב׳ 🧠</h1>
     <p class="lead">אתר קטן וחמים לתרגול לשלב ב׳ של מבחן המחוננים בכיתה ג׳. בלי לחץ, בקצב של הילדים.</p>
+    <div class="panel calm"><b>🎯 המטרה</b><p>להכיר את המבחן ולהגיע אליו רגועים. זה לא "שינון" ולא אימון בכוח.</p><p>🌱 ${CALM}</p></div>
     <div class="panel"><b>חמישה סוגי שאלות</b><ul class="land-ul">${types}</ul></div>
     <div class="panel"><b>מה יש באתר?</b><ul class="land-ul">
       <li>✏️ תרגול לכל סוג שאלה, וגם תרגול מעורב</li><li>📝 מבחן דמה מלא עם שעון</li>
@@ -230,7 +232,7 @@ function finishExam(): void {
 }
 function renderExam(): void {
   if (ephase === 'intro') {
-    shell(`<h2>מבחן דמה 📝</h2><div class="panel exam-instr"><p>5 חלקים, 10 שאלות בכל חלק. בכל שאלה בוחרים תשובה אחת מתוך 4. אם לא בטוחים – מנחשים. בכל חלק יש שעון.</p><p class="note">במבחן הדמה יש תשובה אחת לכל שאלה, בלי ניסיונות נוספים. 14 דקות לכל חלק (החלוקה שלנו).</p></div>
+    shell(`<h2>מבחן דמה 📝</h2><div class="panel calm">🌱 ${CALM}</div><div class="panel exam-instr"><p>5 חלקים, 10 שאלות בכל חלק. בכל שאלה בוחרים תשובה אחת מתוך 4. אם לא בטוחים – מנחשים. בכל חלק יש שעון.</p><p class="note">במבחן הדמה יש תשובה אחת לכל שאלה, בלי ניסיונות נוספים. 14 דקות לכל חלק (החלוקה שלנו).</p></div>
     <button class="primary" id="go">מתחילים</button><button class="ghost" id="back">חזרה</button>`)
     app.querySelector('#go')!.addEventListener('click', () => { ephase = 'ch'; render() })
     app.querySelector('#back')!.addEventListener('click', () => go('home')); return

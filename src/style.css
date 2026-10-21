@@ -493,3 +493,4 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .land-h{font-size:26px;margin:6px 0}
 .land-ul{list-style:none;padding:0;margin:6px 0 0}.land-ul li{margin:5px 0;line-height:1.5}
 .land-rem{display:flex;gap:8px;align-items:center;justify-content:center;font-size:14px;margin:12px 0 6px}
+.calm{background:#f0f8ee;border-color:#cfe6c8}
