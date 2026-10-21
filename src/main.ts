@@ -25,22 +25,35 @@ const PRIVACY_FULL = `<ul class="land-ul">
 const CALM = 'המבחן קשה בכוונה. אף אחד לא אמור לדעת הכול. מותר לנחש, ומה שחשוב זה לנסות.'
 const WA = 'https://chat.whatsapp.com/H6L5jeHPNT0AmgmK83oZ8M'
 const WA_NOTE = 'שימו לב: מי שמצטרף לקבוצת הוואטסאפ, חברי הקבוצה רואים את מספר הטלפון שלו. האתר עצמו לא שולח שום מידע.'
-function toast(t: string): void {
-  const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d)
-  setTimeout(() => d.remove(), 2600)
+let fbItem: GItem | null = null
+const strip = (h: string) => { const d = document.createElement('div'); d.innerHTML = h; return (d.textContent || '').replace(/\s+/g, ' ').trim() }
+export function feedbackText(it: GItem): string {
+  const opts = it.options.map((o, i) => `${'אבגד'[i]}. ${strip(o) || '(צורה)'}`).join('\n')
+  return `פידבק על שאלה ${it.id} (${GTYPE_META[it.type].title}):\n${it.plain}\n${opts}\nמה רציתי לומר: `
 }
-async function copyText(t: string): Promise<void> {
-  try { await navigator.clipboard.writeText(t) } catch {
-    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove()
+async function copyText(t: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(t); return true } catch {
+    const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy') } catch { ok = false } ta.remove(); return ok
   }
 }
-let fbItem: GItem | null = null
+function feedbackPopup(text: string, copied: boolean): void {
+  const d = document.createElement('div'); d.className = 'fb-pop'; d.id = 'fbPop'
+  d.innerHTML = `<div class="fb-box">${copied
+    ? `<p class="fb-big">✅ השאלה הועתקה.</p><p class="fb-big">בוואטסאפ: לחיצה ארוכה בתיבת ההודעה ← הדבק ← כתבו מה רציתם לומר</p>`
+    : `<p class="fb-big">לא הצלחנו להעתיק אוטומטית. סמנו את הטקסט, העתיקו, ובוואטסאפ: לחיצה ארוכה בתיבת ההודעה ← הדבק</p><textarea class="fb-ta" readonly>${esc(text)}</textarea>`}
+    <a class="primary wa-link" id="fbOpen" href="${WA}" target="_blank" rel="noopener">פתיחת הקבוצה</a>
+    <p class="fb-note">${WA_NOTE}</p><button class="ghost" id="fbClose">סגירה</button></div>`
+  document.body.appendChild(d)
+  const close = () => d.remove()
+  d.querySelector('#fbOpen')!.addEventListener('click', () => setTimeout(close, 300))
+  d.querySelector('#fbClose')!.addEventListener('click', close)
+}
 function bindFeedback(): void {
   app.querySelector('#fbBtn')?.addEventListener('click', async () => {
     if (!fbItem) return
-    await copyText(`[${fbItem.id} · ${GTYPE_META[fbItem.type].title}] ${fbItem.plain}\nפידבק: `)
-    toast('הועתק — הדביקו בקבוצה')
-    setTimeout(() => window.open(WA, '_blank', 'noopener'), 900)
+    const t = feedbackText(fbItem)
+    feedbackPopup(t, await copyText(t))
   })
 }
 const label = (t: string) => (t.startsWith('g:') ? GTYPE_META[t.slice(2) as GType]?.title || t : t)
@@ -140,7 +153,7 @@ function itemHtml(it: GItem): string {
   fbItem = it
   return `<div class="qcard gcard"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div>
   <div class="opt-grid g-opts">${it.options.map((o, i) => `<button type="button" class="opt g-opt" data-i="${i}"><span class="g-letter">${'אבגד'[i]}.</span> <span class="g-optbody">${o}</span></button>`).join('')}</div></div>
-  <button type="button" class="fb-btn" id="fbBtn">💬 פידבק על השאלה</button><p class="fb-note">${WA_NOTE}</p>`
+  <button type="button" class="fb-btn" id="fbBtn">💬 פידבק על השאלה</button><p class="fb-note">השאלה מועתקת (בלי התשובה), ואז פותחים את קבוצת הוואטסאפ ומדביקים.</p>`
 }
 function renderPractice(): void {
   const it = items[qi]
