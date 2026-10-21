@@ -15,9 +15,15 @@ const OFFICIAL_DESC = 'https://meyda.education.gov.il/files/gifted/test-shlav2-d
 const OFFICIAL_EX = 'https://meyda.education.gov.il/files/gifted/test-shlav2-example.pdf'
 const OFFICIAL_ANS = 'https://meyda.education.gov.il/files/gifted/test-shlav2-example-answers.pdf'
 const DISCLAIMER = 'לא קשור למשרד החינוך. תרגול בלבד. לא מבטיח הצלחה במבחן.'
-const PRIVACY = 'שום מידע לא נשלח לשום מקום. אין הרשמה, אין פרסומות ואין מעקב. כל ההתקדמות נשמרת רק במכשיר הזה.'
+const PRIVACY = 'ההתקדמות נשמרת ונבדקת רק במכשיר הזה. שום מידע לא נשלח לשום מקום, ואף אחד לא רואה אותו. אין הרשמה, אין פרסומות ואין כלי מעקב.'
+const PRIVACY_FULL = `<ul class="land-ul">
+      <li>🧠 האתר בודק את התשובות של הילדים כדי לבחור את התרגול של הימים הבאים ולהציג את מסך ההורים. הבדיקה הזו נעשית רק בתוך המכשיר.</li>
+      <li>📵 שום מידע לא נשלח לשום מקום. אף אחד לא רואה אותו, גם לא מי שבנתה את האתר.</li>
+      <li>🙅 אין הרשמה ואין פרסומות.</li>
+      <li>🚫 אין כלים חיצוניים למעקב או לסטטיסטיקה (כמו Google Analytics), ואין עוגיות מעקב.</li>
+      <li>🗑️ אפשר למחוק את כל הנתונים במסך ההורים.</li></ul>`
 const WA = 'https://chat.whatsapp.com/H6L5jeHPNT0AmgmK83oZ8M'
-const WA_NOTE = 'שימו לב: מי שמצטרף לקבוצת הוואטסאפ, חברי הקבוצה רואים את מספר הטלפון שלו. האתר עצמו לא אוסף שום מידע.'
+const WA_NOTE = 'שימו לב: מי שמצטרף לקבוצת הוואטסאפ, חברי הקבוצה רואים את מספר הטלפון שלו. האתר עצמו לא שולח שום מידע.'
 function toast(t: string): void {
   const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d)
   setTimeout(() => d.remove(), 2600)
@@ -78,8 +84,9 @@ function renderLanding(): void {
     <div class="panel"><b>איך משתמשים?</b><ul class="land-ul">
       <li>⏱️ בערך 20 דקות ביום, וזה מספיק</li><li>🔁 בכל שאלה יש עד 3 ניסיונות</li>
       <li>🙈 התשובה לא נחשפת, כדי שהילדים יחשבו בעצמם</li><li>🤝 לא הצליח? מבקשים מאמא, מאבא או מהמורה להסביר</li></ul></div>
+    <div class="panel"><b>🔒 פרטיות</b>${PRIVACY_FULL}</div>
     <div class="panel"><ul class="land-ul">
-      <li>💛 חינם לגמרי, בלי הרשמה</li><li>🔒 שום מידע לא נאסף. הכול נשמר רק במכשיר שלכם</li>
+      <li>💛 חינם לגמרי</li>
       <li>⚠️ האתר לא רשמי ולא קשור למשרד החינוך. תרגול בלבד, לא מבטיח הצלחה במבחן</li></ul></div>
     <div class="panel"><b>💬 פידבק ושאלות</b><p>יש לכם רעיון או מצאתם טעות? <a href="${WA}" target="_blank" rel="noopener">לקבוצת הוואטסאפ</a></p><p class="note">${WA_NOTE}</p></div>
     <p class="note">נבנה באהבה על ידי אמא לילדה בכיתה ג׳ – מרינה 💛</p>
@@ -312,7 +319,7 @@ function renderAbout(): void {
   shell(`<h2>אודות ופרטיות</h2>
   <div class="panel"><p><b>מה זה?</b> אתר תרגול חינמי לשלב ב׳ של מבחן המחוננים לכיתה ג׳. כל השאלות נכתבו במיוחד לאתר הזה.</p>
   <p><b>חשוב:</b> ${DISCLAIMER} האתר לא רשמי ואין לו שום קשר למשרד החינוך או לגוף שעורך את המבחן.</p>
-  <p><b>פרטיות:</b> ${PRIVACY} אין שרת שאוסף נתונים, אין עוגיות מעקב ואין כלי ניתוח. אפשר למחוק הכול ממסך ההורים.</p>
+  <p><b>פרטיות:</b></p>${PRIVACY_FULL}
   <p><b>מידע רשמי:</b> קישורים לאתר משרד החינוך: <a href="${OFFICIAL_DESC}" target="_blank" rel="noopener">תיאור המבחן</a> · <a href="${OFFICIAL_EX}" target="_blank" rel="noopener">מבחן לדוגמה</a> · <a href="${OFFICIAL_ANS}" target="_blank" rel="noopener">תשובות לדוגמה</a> (PDF)</p>
   <p class="note">נבנה בהתנדבות על ידי MARINA. נמצאה טעות? נשמח לשמוע ב<a href="${WA}" target="_blank" rel="noopener">קבוצת הוואטסאפ</a>.</p><p class="note">${WA_NOTE}</p></div>
   <button class="ghost" id="back">→ חזרה</button>`)
