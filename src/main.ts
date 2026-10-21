@@ -6,8 +6,9 @@ import { load, save, wipe, todayKey, type Data, type ExerciseLog } from './stora
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let data: Data = load()
-type Screen = 'home' | 'practice' | 'summary' | 'exam' | 'plan' | 'pin' | 'parent' | 'about'
-let screen: Screen = 'home'
+type Screen = 'landing' | 'home' | 'practice' | 'summary' | 'exam' | 'plan' | 'pin' | 'parent' | 'about'
+const SEEN_KEY = 'gifted-prep-skip-landing'
+let screen: Screen = localStorage.getItem(SEEN_KEY) ? 'home' : 'landing'
 const HELP_MSG = 'כדאי לבקש מאמא, מאבא או מהמורה להסביר את התרגיל הזה'
 const SESSION_N = 12
 const OFFICIAL_DESC = 'https://meyda.education.gov.il/files/gifted/test-shlav2-description.pdf'
@@ -30,7 +31,7 @@ let fbItem: GItem | null = null
 function bindFeedback(): void {
   app.querySelector('#fbBtn')?.addEventListener('click', async () => {
     if (!fbItem) return
-    await copyText(`[${fbItem.id} · ${GTYPE_META[fbItem.type].title}] ${fbItem.plain}\nfeedback: `)
+    await copyText(`[${fbItem.id} · ${GTYPE_META[fbItem.type].title}] ${fbItem.plain}\nפידבק: `)
     toast('הועתק — הדביקו בקבוצה')
     setTimeout(() => window.open(WA, '_blank', 'noopener'), 900)
   })
@@ -45,7 +46,7 @@ function shell(inner: string, right = ''): void {
 }
 function go(s: Screen): void { stopTimer(); screen = s; render(); window.scrollTo(0, 0) }
 function render(): void {
-  ;({ home: renderHome, practice: renderPractice, summary: renderSummary, exam: renderExam, plan: renderPlan, pin: renderPin, parent: renderParent, about: renderAbout } as Record<Screen, () => void>)[screen]()
+  ;({ landing: renderLanding, home: renderHome, practice: renderPractice, summary: renderSummary, exam: renderExam, plan: renderPlan, pin: renderPin, parent: renderParent, about: renderAbout } as Record<Screen, () => void>)[screen]()
 }
 
 function gStats(): { stats: GStats; typeErr: Record<string, number> } {
@@ -63,6 +64,33 @@ function gStats(): { stats: GStats; typeErr: Record<string, number> } {
   return { stats, typeErr }
 }
 
+// ---------- landing ----------
+function renderLanding(): void {
+  const types = GTYPES.map((t) => `<li>${GTYPE_META[t].emoji} ${GTYPE_META[t].title}</li>`).join('')
+  shell(`
+    <div class="land">
+    <h1 class="land-h">תרגול חינמי לשלב ב׳ 🧠</h1>
+    <p class="lead">אתר קטן וחמים לתרגול לשלב ב׳ של מבחן המחוננים בכיתה ג׳. בלי לחץ, בקצב של הילדים.</p>
+    <div class="panel"><b>חמישה סוגי שאלות</b><ul class="land-ul">${types}</ul></div>
+    <div class="panel"><b>מה יש באתר?</b><ul class="land-ul">
+      <li>✏️ תרגול לכל סוג שאלה, וגם תרגול מעורב</li><li>📝 מבחן דמה מלא עם שעון</li>
+      <li>🗓️ תוכנית תרגול ל-5 חודשים</li><li>👪 מסך הורים: מה הולך טוב, מה קשה, ומה כדאי לתרגל מחר</li></ul></div>
+    <div class="panel"><b>איך משתמשים?</b><ul class="land-ul">
+      <li>⏱️ בערך 20 דקות ביום, וזה מספיק</li><li>🔁 בכל שאלה יש עד 3 ניסיונות</li>
+      <li>🙈 התשובה לא נחשפת, כדי שהילדים יחשבו בעצמם</li><li>🤝 לא הצליח? מבקשים מאמא, מאבא או מהמורה להסביר</li></ul></div>
+    <div class="panel"><ul class="land-ul">
+      <li>💛 חינם לגמרי, בלי הרשמה</li><li>🔒 שום מידע לא נאסף. הכול נשמר רק במכשיר שלכם</li>
+      <li>⚠️ האתר לא רשמי ולא קשור למשרד החינוך. תרגול בלבד, לא מבטיח הצלחה במבחן</li></ul></div>
+    <div class="panel"><b>💬 פידבק ושאלות</b><p>יש לכם רעיון או מצאתם טעות? <a href="${WA}" target="_blank" rel="noopener">לקבוצת הוואטסאפ</a></p><p class="note">${WA_NOTE}</p></div>
+    <p class="note">נבנה באהבה על ידי אמא לילדה בכיתה ג׳ – מרינה 💛</p>
+    <label class="land-rem"><input type="checkbox" id="rem"/> לא להציג את הדף הזה שוב</label>
+    <button class="primary" id="start">מתחילים ▶</button>
+    <p class="note"><a href="#" id="skip">דילוג לאתר</a></p></div>`)
+  const enter = () => { if (app.querySelector<HTMLInputElement>('#rem')!.checked) localStorage.setItem(SEEN_KEY, '1'); go('home') }
+  app.querySelector('#start')!.addEventListener('click', enter)
+  app.querySelector('#skip')!.addEventListener('click', (e) => { e.preventDefault(); enter() })
+}
+
 // ---------- home ----------
 function renderHome(): void {
   shell(`
@@ -72,6 +100,7 @@ function renderHome(): void {
     <button class="primary" id="btnExam">📝 מבחן דמה מלא</button>
     <button class="ghost" id="btnPlan">🗓️ תוכנית ל-5 חודשים</button>
     <button class="ghost" id="btnParent">👪 מסך הורים</button>
+    <p class="note"><a href="#" id="lnkLanding">מה זה האתר? ואיך משתמשים</a></p>
     <p class="note">בכל שאלה יש עד 3 ניסיונות. התשובה לא נחשפת – כך לומדים לחשוב.</p>
     <p class="note">מידע רשמי על המבחן (קישור לאתר משרד החינוך): <a href="${OFFICIAL_DESC}" target="_blank" rel="noopener">תיאור המבחן (PDF)</a></p>`)
   const grid = app.querySelector('#mods')!
@@ -83,6 +112,7 @@ function renderHome(): void {
   app.querySelector('#btnMixed')!.addEventListener('click', () => startPractice('mixed'))
   app.querySelector('#btnExam')!.addEventListener('click', startExam)
   app.querySelector('#btnPlan')!.addEventListener('click', () => go('plan'))
+  app.querySelector('#lnkLanding')!.addEventListener('click', (e) => { e.preventDefault(); go('landing') })
   app.querySelector('#btnParent')!.addEventListener('click', () => go(data.pin ? 'pin' : 'parent'))
 }
 
