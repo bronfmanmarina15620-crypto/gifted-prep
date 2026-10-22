@@ -701,3 +701,26 @@ export function pickExamChapter(type: GType, n = 10): GItem[] {
   while (out.length < n && rest.length) out.push(rest.pop()!)
   return out.sort((a, b) => a.diff - b.diff)
 }
+
+// ---------- sub-kinds (parent screen only) ----------
+const AN_KIND = 'place place animal worker part opp animal tool need need place tool produce similar opp need need tool category need worker produce animal tool worker opp category worker part opp need place similar similar similar place produce produce animal worker animal place worker similar tool animal animal produce category animal need part trait similar part trait opp similar opp opp similar opp worker worker opp similar'.split(' ')
+export const KIND_HE: Record<string, string> = {
+  part: 'חלק ושלם', tool: 'כלי ומה עושים בו', opp: 'הפכים', similar: 'מילים דומות (חזק / חלש)', animal: 'בעלי חיים: גור, קול, תנועה',
+  place: 'מה נמצא איפה', worker: 'מקצועות', produce: 'ממה עושים מה', need: 'מה צריך / מה עוזר', category: 'סוג וקבוצה', trait: 'תכונה ומה עושים',
+  anfill: 'השלמת זוג מילים', sconn: 'מילות קישור (לכן, אבל, כי...)', svocab: 'בחירת המילה המתאימה',
+  wstory: 'סיפור עם חשבון', wmissing: 'מספר חסר וחלוקה', wratio: 'מחירים, חלקים וגילאים', wlogic: 'חידות היגיון', wdigits: 'חידות ספרות',
+  ntri: 'משולשים', ncirc: 'עיגולים', narrow: 'שרשרת חצים', npyr: 'פירמידות',
+  fseries: 'סדרת צורות', ftable: 'טבלת צורות', fcarpet: 'שטיח עם חלק חסר',
+}
+const BANK_BY_ID: Record<string, GItem> = Object.fromEntries(GIFTED_BANK.map((it) => [it.id, it]))
+export const bankItem = (id: string): GItem | undefined => BANK_BY_ID[id]
+export function kindOf(id: string): string {
+  const p = id.replace(/\d+[a-c]?$/, '')
+  if (p === 'an') return AN_KIND[Number(id.slice(2))] || 'other'
+  const m: Record<string, string> = { af: 'anfill', wp: 'wstory', wx: 'wmissing', wh: 'wratio', wt: 'wlogic', wr: 'wlogic', wd: 'wdigits', ns: 'ntri', nc: 'ncirc', na: 'narrow', np: 'npyr', fc: 'fcarpet', fr: 'ftable', fy: 'ftable', fl: 'ftable', fp: 'fseries', fq: 'fseries', fx: 'fseries' }
+  if (m[p]) return m[p]
+  const it = BANK_BY_ID[id]
+  if (p === 'se') return it && /(^|[\s/])(ו?לכן|אבל|כי|למרות|אף על פי|אולם|בגלל|משום|כדי|אז|אם|כאשר|לפיכך|אלא|ואילו|עד ש|מפני|בזכות|במקום|גם|רק|עוד|כבר|בינתיים|לבסוף|ואז|לעומת|אך)($|[\s/])/.test(it.options[it.correct]) ? 'sconn' : 'svocab'
+  if (p === 'fg') return it && /טבל|שורות/.test(it.plain) ? 'ftable' : 'fseries'
+  return 'other'
+}

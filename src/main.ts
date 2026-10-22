@@ -1,7 +1,7 @@
 import './style.css'
-import { GTYPES, GTYPE_META, GIFTED_TIPS, pickGiftedItems, pickExamChapter, type GItem, type GType, type GStats } from './gifted'
+import { kindOf, KIND_HE, bankItem, GTYPES, GTYPE_META, GIFTED_TIPS, pickGiftedItems, pickExamChapter, type GItem, type GType, type GStats } from './gifted'
 import { PHASES, PLAN_WEEKS, weekOf, phaseOf, taskFor, progress, dayKey } from './plan'
-import { conclusions, renderLogPanel, secs } from './insights'
+import { conclusions, secs } from './insights'
 import { load, save, wipe, todayKey, type Data, type ExerciseLog } from './storage'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -302,6 +302,66 @@ function renderPlan(): void {
 }
 
 // ---------- parent ----------
+const L = 'אבגד'
+function optText(it: GItem | undefined, letter: string): string {
+  if (!it) return letter
+  const i = L.indexOf(letter); if (i < 0) return letter
+  const t = it.type === 'figural' ? '' : strip(it.options[i] || '')
+  return t ? `${letter} (${esc(t)})` : letter
+}
+type KS = { k: string; n: number; first: number; help: number }
+function kindStats(rows: ExerciseLog[]): KS[] {
+  const m: Record<string, KS> = {}
+  rows.forEach((r) => { const k = kindOf(r.itemId); const x = (m[k] ||= { k, n: 0, first: 0, help: 0 }); x.n++; if (r.outcome === 'first') x.first++; if (r.outcome === 'help') x.help++ })
+  return Object.values(m)
+}
+const kname = (k: string) => KIND_HE[k] || 'אחר'
+function easyHard(rows: ExerciseLog[]): string {
+  const ks = kindStats(rows)
+  const easy = ks.filter((x) => x.first / x.n >= 0.7).sort((a, b) => b.n - a.n).map((x) => kname(x.k))
+  const hard = ks.filter((x) => x.first / x.n < 0.5 || x.help > 0).sort((a, b) => b.help - a.help || a.first / a.n - b.first / b.n).map((x) => kname(x.k))
+  const parts: string[] = []
+  if (easy.length) parts.push(`✅ היה קל: ${easy.slice(0, 3).join(', ')}.`)
+  if (hard.length) parts.push(`🎯 היה קשה: ${hard.slice(0, 3).join(', ')}.`)
+  if (!parts.length) parts.push('לא היה משהו קל במיוחד או קשה במיוחד.')
+  return parts.join(' ')
+}
+function onlyOneNote(rows: ExerciseLog[]): string {
+  const types = new Set(rows.map((r) => r.type))
+  return types.size === 1 ? `<p class="note">ℹ️ כרגע תורגל רק נושא אחד (${label([...types][0])}) – שאר הנושאים עוד לא התחילו.</p>` : ''
+}
+function kindSummary(rows: ExerciseLog[]): string {
+  if (!rows.length) return '<p class="note">עוד אין תרגול.</p>'
+  const ks = kindStats(rows).sort((a, b) => a.first / a.n - b.first / b.n)
+  return `<p>${easyHard(rows)}</p>${onlyOneNote(data.log)}
+  <table class="xlog-t"><tr><th>סוג</th><th>תרגילים</th><th>נכון בניסיון ראשון</th></tr>${ks.map((x) => `<tr><td>${kname(x.k)}</td><td>${x.n}</td><td>${Math.round((x.first / x.n) * 100)}%</td></tr>`).join('')}</table>
+  <p class="note">הטבלה מסודרת מהקשה לקל.</p>`
+}
+const OUT = { first: '✅ נכון בניסיון הראשון', solved: '🟡 נכון אחרי כמה ניסיונות', help: '🔴 כדאי להסביר עם מבוגר' }
+function renderDays(log: ExerciseLog[]): string {
+  if (!log.length) return '<p class="note">עוד אין תרגול.</p>'
+  const by: Record<string, ExerciseLog[]> = {}
+  ;[...log].sort((a, b) => b.at - a.at).forEach((r) => (by[r.date] ||= []).push(r))
+  return Object.entries(by).slice(0, 30).map(([d, rs], di) => {
+    const first = rs.filter((r) => r.outcome === 'first').length, solved = rs.filter((r) => r.outcome === 'solved').length, help = rs.filter((r) => r.outcome === 'help').length
+    const avg = rs.reduce((a, r) => a + (r.ms || 0), 0) / rs.length
+    const dn = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'][new Date(d + 'T12:00').getDay()]
+    const items = rs.map((r) => {
+      const it = bankItem(r.itemId)
+      const tm = new Date(r.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא ענה'
+      const ok = it ? optText(it, L[it.correct]) : ''
+      return `<div class="log-row ${r.outcome}"><div class="lr-top"><b>${kname(kindOf(r.itemId))}</b><small>${tm}</small></div>
+        <div class="lr-q">${esc((r.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</div>
+        <div class="lr-meta">${OUT[r.outcome]} · זמן: ${secs(r.ms)}</div>
+        <div class="lr-meta">התשובות שנבחרו: <b>${ans}</b>${ok ? ` · התשובה הנכונה: <b>${ok}</b>` : ''}</div></div>`
+    }).join('')
+    return `<div class="day-card"><h4>יום ${dn}, ${d.split('-').reverse().slice(0, 2).join('.')}</h4>
+      <div class="day-stats"><span><b>${rs.length}</b> תרגילים</span><span>✅ <b>${first}</b> נכון מיד</span><span>🟡 <b>${solved}</b> אחרי כמה ניסיונות</span><span>🔴 <b>${help}</b> צריך הסבר</span><span>⏱ <b>${secs(avg)}</b> בממוצע</span></div>
+      <p class="day-line">${easyHard(rs)}</p>${onlyOneNote(rs)}
+      <details ${di === 0 ? 'open' : ''}><summary>כל התרגילים של היום (${rs.length})</summary>${items}</details></div>`
+  }).join('')
+}
 function renderPin(): void {
   shell(`<h2>מסך הורים 🔒</h2><p class="lead">הקוד שבחרתם:</p><input id="pin" type="password" inputmode="numeric" class="pin-in" maxlength="8"/><button class="primary" id="ok">כניסה</button><button class="ghost" id="back">חזרה</button>
   <p class="note">שכחתם את הקוד? אפשר למחוק את נתוני האתר בהגדרות הדפדפן (כל ההתקדמות תימחק).</p>`)
@@ -318,13 +378,13 @@ function renderParent(): void {
     ${c.points.length ? `<div class="panel" id="concl"><b>מסקנות:</b><ul>${c.points.map((p) => `<li>${p}</li>`).join('')}</ul></div>` : ''}
     ${mocks ? `<div class="panel"><b>מבחני דמה אחרונים:</b><ul>${mocks}</ul></div>` : ''}
     <div class="panel"><b>טיפים למחר:</b><ul>${GTYPES.map((t) => `<li><b>${GTYPE_META[t].title}:</b> ${GIFTED_TIPS[t]}</li>`).join('')}</ul></div>
-    <h3>יומן תרגילים</h3><div id="xlog"></div>
+    <h3>מה קל ומה קשה (14 ימים)</h3><div class="panel" id="kinds">${kindSummary(data.log.filter((r) => r.at >= Date.now() - 14 * 86400000))}</div>
+    <h3>יומן לפי ימים</h3><div id="xlog">${renderDays(data.log)}</div>
     <div class="panel"><b>קוד הורים (לא חובה)</b><p class="note">${data.pin ? 'יש קוד. ' : 'אין קוד – כל אחד יכול להיכנס למסך הזה. '}הקוד נשמר רק במכשיר הזה.</p>
       <input id="npin" type="password" inputmode="numeric" maxlength="8" class="pin-in" placeholder="קוד חדש (4–8 ספרות)"/><button class="ghost" id="setpin">שמירת קוד</button>${data.pin ? '<button class="ghost" id="rmpin">ביטול הקוד</button>' : ''}</div>
     <div class="panel"><b>יש לכם רעיון או מצאתם טעות?</b><a class="primary wa-link" id="waIdeas" href="${WA}" target="_blank" rel="noopener">💡 רעיונות ושיפורים — לקבוצת הוואטסאפ</a><p class="note">${WA_NOTE}</p></div>
     <button class="danger" id="wipe">מחיקת כל הנתונים מהמכשיר</button>
     <button class="ghost" id="back">→ חזרה</button>`)
-  renderLogPanel(app.querySelector('#xlog')!, data.log, label)
   app.querySelector('#setpin')!.addEventListener('click', () => { const v = app.querySelector<HTMLInputElement>('#npin')!.value; if (!/^\d{4,8}$/.test(v)) { alert('קוד של 4 עד 8 ספרות'); return } data.pin = v; save(data); alert('הקוד נשמר'); render() })
   app.querySelector('#rmpin')?.addEventListener('click', () => { data.pin = undefined; save(data); render() })
   app.querySelector('#wipe')!.addEventListener('click', () => { if (confirm('למחוק את כל ההתקדמות מהמכשיר הזה?')) { wipe(); data = load(); go('home') } })
