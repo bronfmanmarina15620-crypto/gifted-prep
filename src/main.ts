@@ -1,5 +1,5 @@
 import './style.css'
-import { kindOf, KIND_HE, bankItem, GTYPES, GTYPE_META, GIFTED_TIPS, pickGiftedItems, pickExamChapter, type GItem, type GType, type GStats } from './gifted'
+import { kindOf, KIND_HE, bankItem, GTYPES, GTYPE_META, GIFTED_TIPS, pickSession, pickExamChapter, type GItem, type GType } from './gifted'
 import { PHASES, PLAN_WEEKS, weekOf, phaseOf, taskFor, progress, dayKey } from './plan'
 import { conclusions, secs } from './insights'
 import { load, save, wipe, todayKey, type Data, type ExerciseLog } from './storage'
@@ -69,20 +69,6 @@ function render(): void {
   ;({ landing: renderLanding, home: renderHome, practice: renderPractice, summary: renderSummary, exam: renderExam, plan: renderPlan, pin: renderPin, parent: renderParent, about: renderAbout } as Record<Screen, () => void>)[screen]()
 }
 
-function gStats(): { stats: GStats; typeErr: Record<string, number> } {
-  const stats: GStats = {}
-  const agg: Record<string, { n: number; bad: number }> = {}
-  for (const r of data.log) {
-    const s = (stats[r.itemId] ||= { tries: 0, fails: 0, firstOk: 0, last: 0, lastFail: 0 })
-    s.tries++; s.last = Math.max(s.last, r.at)
-    if (r.outcome === 'first') s.firstOk++
-    else { s.fails++; s.lastFail = Math.max(s.lastFail, r.at) }
-    const a = (agg[r.type.slice(2)] ||= { n: 0, bad: 0 }); a.n++; if (r.outcome !== 'first') a.bad++
-  }
-  const typeErr: Record<string, number> = {}
-  for (const [t, a] of Object.entries(agg)) typeErr[t] = a.n ? a.bad / a.n : 0
-  return { stats, typeErr }
-}
 
 // ---------- landing ----------
 function renderLanding(): void {
@@ -144,8 +130,7 @@ let qi = 0, attempts = 0, answers: string[] = [], itemStart = 0, okCount = 0, fi
 let helpList: string[] = []
 let curType: GType | 'mixed' = 'mixed'
 function startPractice(t: GType | 'mixed'): void {
-  const { stats, typeErr } = gStats()
-  curType = t; items = pickGiftedItems(t, stats, typeErr, SESSION_N)
+  curType = t; items = pickSession(t, data.log, SESSION_N)
   qi = 0; attempts = 0; answers = []; okCount = 0; firstCount = 0; helpList = []; itemStart = Date.now()
   go('practice')
 }
@@ -217,7 +202,9 @@ let ephase: 'intro' | 'ch' | 'q' | 'res' = 'intro'
 let timerId: number | undefined
 function stopTimer(): void { if (timerId) clearInterval(timerId); timerId = undefined }
 function startExam(): void {
-  exam = EXAM_ORDER.map((t) => { const it = pickExamChapter(t, EXAM_N); return { type: t, items: it, ans: it.map(() => null), start: 0, ms: it.map(() => 0) } })
+  const seen: Record<string, number> = {}
+  for (const r of data.log) seen[r.itemId] = (seen[r.itemId] ?? 0) + 1
+  exam = EXAM_ORDER.map((t) => { const it = pickExamChapter(t, EXAM_N, seen); return { type: t, items: it, ans: it.map(() => null), start: 0, ms: it.map(() => 0) } })
   ec = 0; eq = 0; ephase = 'intro'; go('exam')
 }
 const left = () => Math.max(0, EXAM_CHAPTER_MS - (Date.now() - exam[ec].start))

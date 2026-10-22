@@ -20,6 +20,7 @@ export type GItem = {
   correct: number
   plain: string // short text description for the help list (does not include answer)
   diff: 1 | 2 | 3
+  kind?: string // sub-kind label key (v2 items)
 }
 
 function rng(seed: number) {
@@ -641,6 +642,177 @@ function buildFigural(): GItem[] {
   return items
 }
 
+// ================= Bank expansion v2 (new stable ids: aa, sb, nq, ng, wn) =================
+const AN2: [string, [string, string], [string, string][], 1 | 2 | 3, string][] = [
+  ['מברשת שיניים : שיניים', ['מסרק', 'שיער'], [['כרית', 'מיטה'], ['מגבת', 'מקלחת'], ['סבון', 'מים']], 1, 'tool'],
+  ['דבורה : כוורת', ['ארנבת', 'מחילה'], [['פרה', 'חלב'], ['ציפור', 'כנף'], ['דג', 'סנפיר']], 1, 'place'],
+  ['עלה : עץ', ['נוצה', 'ציפור'], [['פרח', 'אגרטל'], ['שורש', 'אדמה'], ['פרי', 'סל']], 1, 'part'],
+  ['יום : לילה', ['אור', 'חושך'], [['בוקר', 'צהריים'], ['שמש', 'חום'], ['ירח', 'כוכב']], 1, 'opp'],
+  ['אופה : מאפייה', ['רופא', 'מרפאה'], [['נהג', 'הגה'], ['מורה', 'תלמיד'], ['צייר', 'צבע']], 1, 'worker'],
+  ['חתלתול : חתול', ['אפרוח', 'תרנגולת'], [['ביצה', 'קן'], ['כלב', 'גור'], ['עכבר', 'גבינה']], 1, 'animal'],
+  ['מים : קרח', ['בצק', 'לחם'], [['שלג', 'חורף'], ['כוס', 'מים'], ['קמח', 'שק']], 2, 'produce'],
+  ['עיניים : לראות', ['אוזניים', 'לשמוע'], [['ידיים', 'כפפות'], ['רגליים', 'נעליים'], ['אף', 'פנים']], 1, 'tool'],
+  ['מלא : ריק', ['פתוח', 'סגור'], [['גדול', 'רחב'], ['שקט', 'רגוע'], ['חדש', 'נקי']], 1, 'opp'],
+  ['סיר : לבשל', ['מחבת', 'לטגן'], [['צלחת', 'אוכל'], ['כף', 'מרק'], ['תנור', 'מטבח']], 2, 'tool'],
+  ['גלגל הצלה : טביעה', ['קסדה', 'פציעה'], [['בריכה', 'שחייה'], ['אופניים', 'רכיבה'], ['משקפיים', 'עיניים']], 3, 'need'],
+  ['מעיל : חורף', ['סנדלים', 'קיץ'], [['שמלה', 'בד'], ['כובע', 'ראש'], ['גרביים', 'נעליים']], 2, 'need'],
+  ['מלך : ממלכה', ['מנהלת', 'בית ספר'], [['חייל', 'צבא'], ['שחקן', 'קבוצה'], ['תלמיד', 'כיתה']], 2, 'worker'],
+  ['זחל : פרפר', ['ראשן', 'צפרדע'], [['גוזל', 'קן'], ['דג', 'ים'], ['דבורה', 'דבש']], 2, 'animal'],
+  ['ענבים : אשכול', ['פרחים', 'זר'], [['תפוח', 'עץ'], ['לחם', 'פרוסה'], ['ספר', 'דף']], 2, 'category'],
+  ['מהר : לאט', ['חזק', 'חלש'], [['מוקדם', 'בבוקר'], ['רחוק', 'הרחק'], ['יפה', 'נאה']], 1, 'opp'],
+  ['מלח : מלוח', ['סוכר', 'מתוק'], [['לימון', 'צהוב'], ['קפה', 'כוס'], ['קרח', 'מים']], 1, 'trait'],
+  ['קילומטר : מטר', ['שעה', 'דקה'], [['יום', 'לילה'], ['שקל', 'ארנק'], ['שנה', 'חורף']], 3, 'part'],
+  ['מצפן : כיוון', ['מאזניים', 'משקל'], [['שעון', 'יד'], ['מפה', 'ארץ'], ['סרגל', 'מחברת']], 3, 'tool'],
+  ['שוקולד : קקאו', ['גבינה', 'חלב'], [['עוגה', 'תנור'], ['לחם', 'פרוסה'], ['מיץ', 'כוס']], 2, 'produce'],
+  ['נמר : חתול', ['זאב', 'כלב'], [['עכבר', 'חתול'], ['אריה', 'כלוב'], ['פרה', 'שדה']], 3, 'category'],
+  ['מחק : טעות', ['מטאטא', 'לכלוך'], [['עיפרון', 'ציור'], ['דף', 'מחברת'], ['צבע', 'קיר']], 2, 'tool'],
+  ['לשאול : לענות', ['לזרוק', 'לתפוס'], [['לרוץ', 'למהר'], ['לקרוא', 'ספר'], ['לשיר', 'שיר']], 2, 'opp'],
+  ['שקר : אמת', ['פחד', 'אומץ'], [['כעס', 'רוגז'], ['שמחה', 'צחוק'], ['עצב', 'דמעה']], 3, 'opp'],
+  ['מנורה : חשמל', ['מכונית', 'דלק'], [['אופניים', 'שביל'], ['מטוס', 'שמיים'], ['סירה', 'נמל']], 2, 'need'],
+  ['מגדלור : ספינות', ['רמזור', 'מכוניות'], [['כביש', 'משאיות'], ['חוף', 'גלים'], ['שעון', 'זמן']], 3, 'tool'],
+  ['קוביות : מגדל', ['לבנים', 'קיר'], [['צבעים', 'מברשת'], ['חול', 'דלי'], ['נייר', 'מספריים']], 2, 'produce'],
+  ['כינור : מיתרים', ['פסנתר', 'קלידים'], [['תוף', 'מקל'], ['חליל', 'מנגן'], ['זמר', 'במה']], 2, 'part'],
+  ['דוב : מערה', ['סוס', 'אורווה'], [['כלב', 'עצם'], ['חתול', 'שפם'], ['ציפור', 'נוצה']], 1, 'place'],
+  ['חודש : שנה', ['יום', 'שבוע'], [['שעה', 'שעון'], ['לילה', 'ירח'], ['קיץ', 'חורף']], 2, 'part'],
+  ['ספינה : קברניט', ['מטוס', 'טייס'], [['רכבת', 'פסים'], ['אוטובוס', 'נוסע'], ['אופניים', 'קסדה']], 2, 'worker'],
+  ['נחש : זוחל', ['ציפור', 'עפה'], [['כלב', 'נובח'], ['סוס', 'רעמה'], ['חתול', 'שפם']], 2, 'animal'],
+]
+function buildAnalogies2(): GItem[] {
+  const r = rng(111)
+  return AN2.map(([pair, right, wrongs, d, kind], i) => ({
+    ...pack(`aa${i}`, 'analogy', `<div class="g-big">${pair}</div>`, `${right[0]} : ${right[1]}`, wrongs.map((w) => `${w[0]} : ${w[1]}`), `קשר בין מילים: ${pair}`, r, d),
+    kind,
+  }))
+}
+const SENT2: [string, string, string[]][] = [
+  ['הלכתי לישון מוקדם, ___ קמתי ___ בבוקר.', 'ולכן / רענן', ['אבל / רענן', 'ולכן / עייף מאוד', 'כי / רענן']],
+  ['השמיים התכסו בעננים שחורים, ___ ___ מטרייה.', 'ולכן / לקחתי', ['אבל / לקחתי', 'ולכן / השארתי בבית', 'כי / לקחתי']],
+  ['יעל ___ את הכלב לטייל, ___ הוא ישב ליד הדלת ויילל.', 'שכחה להוציא / ולכן', ['הוציאה / ולכן', 'שכחה להוציא / אבל', 'הוציאה / כי']],
+  ['העוגה ___ כי שכחנו אותה בתנור ___.', 'נשרפה / יותר מדי זמן', ['תפחה יפה / יותר מדי זמן', 'נשרפה / רק לרגע', 'הייתה טעימה / יותר מדי זמן']],
+  ['כשהגענו לתחנה, האוטובוס ___ יצא, ___ חיכינו לאוטובוס הבא.', 'כבר / ולכן', ['עוד לא / ולכן', 'כבר / אבל', 'עוד לא / כי']],
+  ['הגמל יכול ללכת ימים רבים במדבר ___ לשתות, ___ הוא אוגר מים בגוף.', 'בלי / כי', ['עם / כי', 'בלי / אבל', 'בלי / למרות ש']],
+  ['אחי הקטן ___ לשחות, ___ הוא נשאר במים הרדודים.', 'עדיין לא יודע / ולכן', ['כבר יודע היטב / ולכן', 'עדיין לא יודע / אבל', 'כבר יודע / כי']],
+  ['החדר היה ___ כל כך, שלא מצאתי בו את ___ שלי.', 'מבולגן / הנעליים', ['מסודר / הנעליים', 'מבולגן / הבלגן', 'נקי / החדר']],
+  ['נגה ___ למבחן היטב, ___ קיבלה ציון גבוה.', 'התכוננה / ולכן', ['לא התכוננה / ולכן', 'התכוננה / אבל', 'שכחה / ולכן']],
+  ['במקום ___ בטלוויזיה, ___ לשחק בחצר.', 'לצפות / יצאנו', ['לשחק / יצאנו', 'לצפות / נשארנו לצפות', 'לישון / ישנו']],
+  ['השעון המעורר ___, ולכן איחרתי ___ לבית הספר.', 'לא צלצל / בבוקר', ['צלצל בזמן / בבוקר', 'לא צלצל / בלילה', 'צלצל / בערב']],
+  ['אף על פי שהמשחק היה ___, אף אחד לא רצה ___.', 'ארוך / להפסיק', ['קצר / להפסיק', 'ארוך / להמשיך', 'משעמם / להמשיך']],
+  ['הנמלה ___ אבל ___ מאוד: היא מרימה דברים כבדים ממנה.', 'קטנה / חזקה', ['גדולה / חזקה', 'קטנה / חלשה', 'איטית / עייפה']],
+  ['קודם ___ את הזרעים, אחר כך ___ אותם, ולבסוף צומחים פרחים.', 'שותלים / משקים', ['קוטפים / משקים', 'שותלים / קוטפים', 'משקים / שותלים']],
+  ['הכביסה לא ___ כי כל היום ___ גשם.', 'התייבשה / ירד', ['התלכלכה / ירד', 'התייבשה / לא ירד', 'נקייה / זרח']],
+  ['הספרייה ___ בשבת, ___ הלכנו אליה ביום ראשון.', 'סגורה / ולכן', ['פתוחה / ולכן', 'סגורה / אבל', 'פתוחה / כי']],
+  ['עידו ___ על כך שדחף את חברו, ואחר כך הם ___.', 'התנצל / השלימו', ['צחק / השלימו', 'התנצל / רבו שוב', 'שמח / בכו']],
+  ['כשהחשמל ___, הדלקנו ___.', 'הפסיק לעבוד / נרות', ['חזר / נרות', 'הפסיק לעבוד / את הטלוויזיה', 'עבד / חושך']],
+  ['הדג ___ במים, ואילו הציפור ___ באוויר.', 'שוחה / עפה', ['עף / שוחה', 'שוחה / שוחה', 'הולך / רץ']],
+  ['ככל ש___ יותר, כך ___ יותר.', 'מתאמנים / משתפרים', ['נחים / משתפרים', 'מתאמנים / שוכחים', 'ישנים / מתאמנים']],
+  ['השולחן היה ___ מדי, ולכן לא ___ להכניס אותו בדלת.', 'רחב / הצלחנו', ['צר / הצלחנו', 'רחב / רצינו', 'קטן / הצלחנו']],
+  ['למרות שהיה לה ___, מיכל ___ לחברה את הכדור שלה.', 'קשה להיפרד ממנו / השאילה', ['קל / השאילה', 'קשה להיפרד ממנו / לא נתנה', 'קל / לא השאילה']],
+  ['אם משקים את העציץ ___, הוא ___.', 'כל יום / גדל', ['אף פעם / גדל', 'כל יום / מתייבש', 'מחר / גדל אתמול']],
+  ['הבוקר היה ___, אבל בצהריים ___ חם מאוד.', 'קריר / נהיה', ['חם / נהיה', 'קריר / נהיה קר', 'לוהט / נהיה']],
+  ['רק אחרי ש___ את השיעורים, ___ לצאת לשחק.', 'סיימתי / הרשו לי', ['התחלתי / הרשו לי', 'סיימתי / אסרו עליי', 'שכחתי / הרשו לי']],
+  ['החתול ___ על העץ, ועכשיו הוא ___ לרדת.', 'טיפס / מפחד', ['ירד / מפחד', 'טיפס / רץ', 'ישן / טיפס']],
+  ['לא רק ש___ את כל העוגה, הוא גם ___ את הצלחת.', 'אכל / ליקק', ['השאיר / ליקק', 'אכל / לא נגע ב', 'שכח / ליקק']],
+  ['הרוח הייתה ___ כל כך, ש___ עפו מהעצים.', 'חזקה / העלים', ['חלשה / העלים', 'חזקה / השורשים', 'חמה / הגזעים']],
+  ['מי שקם מוקדם ___ את הזריחה, ומי ש___ מפספס אותה.', 'רואה / ישן עד מאוחר', ['מפספס / ישן עד מאוחר', 'רואה / קם מוקדם', 'שומע / רואה']],
+  ['הילדה הייתה ___, ולכן ___ עד שהגיע תורה.', 'סבלנית / חיכתה בשקט', ['חסרת סבלנות / חיכתה בשקט', 'סבלנית / צעקה', 'עצבנית / שתקה']],
+  ['התרופה ___, ___ היא עזרה לי להבריא.', 'הייתה מרה / אבל', ['הייתה מתוקה / אבל', 'הייתה מרה / ולכן', 'הייתה טעימה / למרות ש']],
+  ['השכנים נסעו ___, ו___ ביקשו שנשקה את הצמחים שלהם.', 'לחופשה / לפני כן', ['הביתה / לפני כן', 'לחופשה / אחרי שחזרו', 'לשעה / בשנה הבאה']],
+  ['כשהמים ___ ל-100 מעלות, הם ___.', 'מגיעים / רותחים', ['מגיעים / קופאים', 'יורדים / רותחים', 'מגיעים / מתקררים']],
+  ['איתי שכח את המפתח, ___ הוא ___ בחוץ עד שאמא חזרה.', 'ולכן / חיכה', ['אבל / חיכה', 'ולכן / נכנס מיד', 'כי / חיכה']],
+  ['הדרך הייתה ___, ___ הלכנו בזהירות.', 'חלקה מהגשם / ולכן', ['יבשה ונוחה / ולכן', 'חלקה מהגשם / אבל', 'יבשה ונוחה / כי']],
+  ['השיר היה ___, ולכן כולם ___ איתו.', 'קליט / שרו', ['משעמם / שרו', 'קליט / שתקו', 'עצוב / רקדו']],
+  ['הבלון ___ אחרי שהשארנו אותו ___ לתנור החם.', 'התפוצץ / קרוב מדי', ['התנפח / רחוק מאוד', 'התפוצץ / רחוק מאוד', 'קפא / קרוב מדי']],
+  ['הציפורים עפות דרומה ___, כי שם ___ יותר.', 'בסתיו / חם', ['באביב / קר', 'בסתיו / קר', 'בקיץ / שלג']],
+]
+function buildSentences2(): GItem[] {
+  const r = rng(122)
+  return SENT2.map(([s, right, wrongs], i) => pack(`sb${i}`, 'sentence', `<div class="g-sent">${s}</div>`, right, wrongs, `השלמת משפט: ${s}`, r, sentDiff(s, right)))
+}
+
+// ---- verified number generators: the true rule is the ONLY rule in its family matching the examples ----
+type Rule = { name: string; d: 1 | 2 | 3; f: (v: number[]) => number }
+function uniqueRuleItems(seed: number, prefix: string, count: number, rules: Rule[], gen: (ri: (a: number, b: number) => number) => number[], render: (ex: { v: number[]; out: number | string }[]) => string, label: string): GItem[] {
+  const r = rng(seed)
+  const ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1))
+  const ok = (x: number) => Number.isInteger(x) && x > 0 && x < 100
+  const items: GItem[] = []
+  let i = 0, guard = 0
+  while (items.length < count && guard++ < 100000) {
+    const rule = rules[i % rules.length]
+    const xs = [gen(ri), gen(ri), gen(ri)]
+    if (!xs.every((v) => ok(rule.f(v)))) continue
+    // every other rule must contradict at least one of the two examples
+    if (rules.some((o) => o !== rule && xs.slice(0, 2).every((v) => o.f(v) === rule.f(v)))) continue
+    const ans = rule.f(xs[2])
+    const wr = rules.filter((o) => o !== rule).map((o) => o.f(xs[2])).filter((x) => ok(x) && x !== ans)
+    const opts = nums(ans, wr)
+    if (new Set([String(ans), ...opts]).size !== 4) continue
+    const stem = render([{ v: xs[0], out: rule.f(xs[0]) }, { v: xs[1], out: rule.f(xs[1]) }, { v: xs[2], out: '?' }])
+    items.push(pack(`${prefix}${items.length}`, 'numshape', stem, String(ans), opts, `${label} (תרגיל ${items.length + 1})`, r, rule.d))
+    i++
+  }
+  return items
+}
+const sqSvg = (v: number[], mid: number | string) => {
+  const t = (s: number | string, x: number, y: number, big = false) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${big ? 22 : 17}" font-weight="700" fill="${s === '?' ? '#e5533d' : '#223'}">${s}</text>`
+  return `<svg viewBox="0 0 110 110" width="100" height="100" class="g-svg"><rect x="6" y="6" width="98" height="98" rx="6" fill="#f3fbef" stroke="#59a85a" stroke-width="3"/>${t(v[0], 22, 26)}${t(v[1], 88, 26)}${t(v[2], 22, 98)}${t(v[3], 88, 98)}${t(mid, 55, 63, true)}</svg>`
+}
+function buildNumShapes2(): GItem[] {
+  const sq: Rule[] = [
+    { name: 'sum4', d: 1, f: ([a, b, c, d]) => a + b + c + d },
+    { name: 'topMinusBottom', d: 2, f: ([a, b, c, d]) => a + b - c - d },
+    { name: 'topProdPlus', d: 2, f: ([a, b, c, d]) => a * b + c + d },
+    { name: 'diagProd', d: 3, f: ([a, b, c, d]) => a * d + b * c },
+    { name: 'rowsProdDiff', d: 3, f: ([a, b, c, d]) => a * b - c * d },
+    { name: 'sumTimesSum', d: 3, f: ([a, b, c, d]) => (a + b) * (c + d) },
+  ]
+  const squares = uniqueRuleItems(441, 'nq', 36, sq, (ri) => [ri(1, 9), ri(1, 9), ri(1, 6), ri(1, 6)],
+    (ex) => `<div class="g-row" dir="ltr">${ex.map((e) => sqSvg(e.v, e.out)).join('')}</div>`, 'מספר חסר בריבועים')
+  const gr: Rule[] = [
+    { name: 'add', d: 1, f: ([a, b]) => a + b },
+    { name: 'sub', d: 1, f: ([a, b]) => a - b },
+    { name: 'mul', d: 2, f: ([a, b]) => a * b },
+    { name: 'addPlus1', d: 2, f: ([a, b]) => a + b + 1 },
+    { name: 'twoAplusB', d: 3, f: ([a, b]) => 2 * a + b },
+    { name: 'mulMinusA', d: 3, f: ([a, b]) => a * b - a },
+  ]
+  const grids = uniqueRuleItems(442, 'ng', 36, gr, (ri) => [ri(2, 12), ri(1, 9)],
+    (ex) => `<table class="g-numgrid" dir="ltr">${ex.map((e) => `<tr><td>${e.v[0]}</td><td>${e.v[1]}</td><td class="${e.out === '?' ? 'q' : ''}">${e.out}</td></tr>`).join('')}</table>`, 'טבלת מספרים: מה חסר בשורה האחרונה')
+  return [...squares, ...grids]
+}
+
+// ---- original word problems, answers computed ----
+function buildWordProblems2(): GItem[] {
+  const r = rng(133)
+  const ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1))
+  const items: GItem[] = []
+  const add = (stem: string, ans: number, cands: number[], plain: string, d: 1 | 2 | 3, unit = '') =>
+    items.push({ ...pack(`wn${items.length}`, 'word', `<div class="g-sent">${stem}</div>`, `${ans}${unit}`, nums(ans, cands).map((x) => `${x}${unit}`), plain, r, d), kind: 'wstory' })
+  for (let k = 0; k < 6; k++) {
+    const boxes = ri(2, 5), per = ri(3, 8), kids = ri(3, 6), each = (boxes * per) % kids === 0 ? 0 : 0
+    void each
+    const total = boxes * per * kids
+    add(`ב-${kids} שקיות יש בכל אחת ${boxes * per} גולות. מחלקים את כל הגולות שווה בשווה ל-${boxes * kids} ילדים. כמה גולות מקבל כל ילד?`, total / (boxes * kids), [total, boxes * per, per + 1, total / kids], `חלוקת גולות (${k + 1})`, 2)
+  }
+  for (let k = 0; k < 6; k++) {
+    const a = ri(5, 20) * 2, b = ri(3, 15)
+    add(`לנועה היו ${a} קלפים. היא נתנה חצי מהם לאחיה, ואחר כך קיבלה ${b} קלפים מחברה. כמה קלפים יש לה עכשיו?`, a / 2 + b, [a + b, a - b, a / 2, a / 2 - b], `קלפים של נועה (${k + 1})`, 1)
+  }
+  for (let k = 0; k < 6; k++) {
+    const heads = ri(6, 14), sheep = ri(1, heads - 1), legs = sheep * 4 + (heads - sheep) * 2
+    add(`בחצר יש תרנגולות וכבשים. סופרים ${heads} ראשים ו-${legs} רגליים. כמה כבשים יש בחצר?`, sheep, [heads - sheep, legs / 4, heads, legs - heads], `ראשים ורגליים (${k + 1})`, 3)
+  }
+  for (let k = 0; k < 6; k++) {
+    const R = ri(120, 150), y = ri(3, 12), x = ri(2, 9)
+    add(`רון גבוה ${R} ס״מ. גיל נמוך מרון ב-${y} ס״מ. דן גבוה מגיל ב-${x} ס״מ. מה הגובה של דן?`, R - y + x, [R + y + x, R - y - x, R - y, R + x], `גבהים (${k + 1})`, 2, ' ס״מ')
+  }
+  for (let k = 0; k < 6; k++) {
+    const every = ri(2, 5), n = ri(4, 9), steps = n - 1
+    add(`בשורה עומדים עמודים. בין כל שני עמודים סמוכים יש ${every} מטרים. יש ${n} עמודים. מה המרחק מהעמוד הראשון עד האחרון?`, steps * every, [n * every, (n + 1) * every, n + every, steps + every], `עמודים בשורה (${k + 1})`, 3, ' מטר')
+  }
+  return items
+}
+
 export const GIFTED_BANK: GItem[] = [
   ...buildAnalogies(),
   ...buildAnalogyFill(),
@@ -648,6 +820,10 @@ export const GIFTED_BANK: GItem[] = [
   ...buildWordProblems(),
   ...buildNumShapes(),
   ...buildFigural(),
+  ...buildAnalogies2(),
+  ...buildSentences2(),
+  ...buildWordProblems2(),
+  ...buildNumShapes2(),
 ]
 
 export type GStats = Record<string, { tries: number; fails: number; firstOk: number; last: number; lastFail: number }>
@@ -691,9 +867,9 @@ export const GIFTED_TIPS: Record<GType, string> = {
 }
 
 /** Exam chapter: easy→hard ordering (3 easy, 4 medium, 3 hard when available). */
-export function pickExamChapter(type: GType, n = 10): GItem[] {
+export function pickExamChapter(type: GType, n = 10, seen?: Record<string, number>): GItem[] {
   const pool = GIFTED_BANK.filter((it) => it.type === type)
-  const by = (d: number) => pool.filter((it) => it.diff === d).sort(() => Math.random() - 0.5)
+  const by = (d: number) => pool.filter((it) => it.diff === d).map((it) => [it, (seen?.[it.id] ?? 0) + Math.random()] as const).sort((a, b) => a[1] - b[1]).map((x) => x[0])
   const want: [number, number][] = [[1, 3], [2, 4], [3, 3]]
   const out: GItem[] = []
   for (const [d, k] of want) out.push(...by(d).slice(0, k))
@@ -709,18 +885,84 @@ export const KIND_HE: Record<string, string> = {
   place: 'מה נמצא איפה', worker: 'מקצועות', produce: 'ממה עושים מה', need: 'מה צריך / מה עוזר', category: 'סוג וקבוצה', trait: 'תכונה ומה עושים',
   anfill: 'השלמת זוג מילים', sconn: 'מילות קישור (לכן, אבל, כי...)', svocab: 'בחירת המילה המתאימה',
   wstory: 'סיפור עם חשבון', wmissing: 'מספר חסר וחלוקה', wratio: 'מחירים, חלקים וגילאים', wlogic: 'חידות היגיון', wdigits: 'חידות ספרות',
-  ntri: 'משולשים', ncirc: 'עיגולים', narrow: 'שרשרת חצים', npyr: 'פירמידות',
+  ntri: 'משולשים', nsquare: 'ריבועים', ngrid: 'טבלת מספרים', ncirc: 'עיגולים', narrow: 'שרשרת חצים', npyr: 'פירמידות',
   fseries: 'סדרת צורות', ftable: 'טבלת צורות', fcarpet: 'שטיח עם חלק חסר',
 }
 const BANK_BY_ID: Record<string, GItem> = Object.fromEntries(GIFTED_BANK.map((it) => [it.id, it]))
 export const bankItem = (id: string): GItem | undefined => BANK_BY_ID[id]
 export function kindOf(id: string): string {
-  const p = id.replace(/\d+[a-c]?$/, '')
+  const p0 = id.replace(/\d+[a-c]?$/, '')
+  let p2 = p0
+  if (BANK_BY_ID[id]?.kind) return BANK_BY_ID[id].kind!
+  if (p0 === 'sb') p2 = 'se'
+  const p = p2
   if (p === 'an') return AN_KIND[Number(id.slice(2))] || 'other'
-  const m: Record<string, string> = { af: 'anfill', wp: 'wstory', wx: 'wmissing', wh: 'wratio', wt: 'wlogic', wr: 'wlogic', wd: 'wdigits', ns: 'ntri', nc: 'ncirc', na: 'narrow', np: 'npyr', fc: 'fcarpet', fr: 'ftable', fy: 'ftable', fl: 'ftable', fp: 'fseries', fq: 'fseries', fx: 'fseries' }
+  const m: Record<string, string> = { af: 'anfill', wp: 'wstory', wx: 'wmissing', wh: 'wratio', wt: 'wlogic', wr: 'wlogic', wd: 'wdigits', nq: 'nsquare', ng: 'ngrid', ns: 'ntri', nc: 'ncirc', na: 'narrow', np: 'npyr', fc: 'fcarpet', fr: 'ftable', fy: 'ftable', fl: 'ftable', fp: 'fseries', fq: 'fseries', fx: 'fseries' }
   if (m[p]) return m[p]
   const it = BANK_BY_ID[id]
   if (p === 'se') return it && /(^|[\s/])(ו?לכן|אבל|כי|למרות|אף על פי|אולם|בגלל|משום|כדי|אז|אם|כאשר|לפיכך|אלא|ואילו|עד ש|מפני|בזכות|במקום|גם|רק|עוד|כבר|בינתיים|לבסוף|ואז|לעומת|אך)($|[\s/])/.test(it.options[it.correct]) ? 'sconn' : 'svocab'
   if (p === 'fg') return it && /טבל|שורות/.test(it.plain) ? 'ftable' : 'fseries'
   return 'other'
+}
+
+// ================= Session scheduler (no repeats + spaced review + easy→hard) =================
+export type GLogRow = { at: number; type: string; itemId: string; outcome: 'first' | 'solved' | 'help' }
+export const REVIEW_DAYS = 3
+type ItemState = { kind: 'fail' | 'check' | 'wait' | 'retired'; last: number }
+/** help → back next session; correct once → one check after 3 days; correct twice (after last miss) → retired. */
+export function itemStates(log: GLogRow[], now = Date.now()): Record<string, ItemState> {
+  const by: Record<string, GLogRow[]> = {}
+  for (const r of log) if (r.type?.startsWith('g:')) (by[r.itemId] ||= []).push(r)
+  const out: Record<string, ItemState> = {}
+  for (const [id, rows] of Object.entries(by)) {
+    rows.sort((a, b) => a.at - b.at)
+    const last = rows[rows.length - 1]
+    if (last.outcome === 'help') { out[id] = { kind: 'fail', last: last.at }; continue }
+    let ok = 0
+    for (let k = rows.length - 1; k >= 0 && rows[k].outcome !== 'help'; k--) ok++
+    out[id] = { kind: ok >= 2 ? 'retired' : now - last.at >= REVIEW_DAYS * 86400000 ? 'check' : 'wait', last: last.at }
+  }
+  return out
+}
+/** Current level 1-3 for a type: move up after ≥5 answers at the level with ≥70% first-try; down if recent <40%. */
+export function typeLevel(log: GLogRow[], type: GType): 1 | 2 | 3 {
+  const rows = log.filter((r) => r.type === 'g:' + type).sort((a, b) => a.at - b.at)
+  let lvl: 1 | 2 | 3 = 1
+  for (const d of [1, 2] as const) {
+    const at = rows.filter((r) => BANK_BY_ID[r.itemId]?.diff === d).slice(-10)
+    if (lvl === d && at.length >= 5 && at.filter((r) => r.outcome === 'first').length / at.length >= 0.7) lvl = (d + 1) as 2 | 3
+  }
+  const recent = rows.slice(-8)
+  if (lvl > 1 && recent.length >= 6 && recent.filter((r) => r.outcome === 'first').length / recent.length < 0.4) lvl = (lvl - 1) as 1 | 2
+  return lvl
+}
+function shuffled<T>(a: T[]): T[] { return a.map((x) => [x, Math.random()] as const).sort((p, q) => p[1] - q[1]).map((p) => p[0]) }
+function pickForType(type: GType, st: Record<string, ItemState>, lvl: number, n: number, taken: Set<string>): GItem[] {
+  const pool = GIFTED_BANK.filter((it) => it.type === type && !taken.has(it.id))
+  const oldest = (a: GItem, b: GItem) => st[a.id].last - st[b.id].last
+  const fails = pool.filter((it) => st[it.id]?.kind === 'fail').sort(oldest).slice(0, Math.ceil(n / 3))
+  const checks = pool.filter((it) => st[it.id]?.kind === 'check').sort(oldest).slice(0, Math.max(2, Math.floor(n / 4)))
+  const out = [...fails, ...checks]
+  const unseen = pool.filter((it) => !st[it.id])
+  for (const d of [lvl, lvl + 1, lvl - 1, lvl + 2, lvl - 2]) {
+    if (out.length >= n) break
+    out.push(...shuffled(unseen.filter((it) => it.diff === d)).slice(0, n - out.length))
+  }
+  // bank exhausted: least-recently seen first (waiting, then retired)
+  for (const k of ['wait', 'retired']) {
+    if (out.length >= n) break
+    out.push(...pool.filter((it) => st[it.id]?.kind === k && !out.includes(it)).sort(oldest).slice(0, n - out.length))
+  }
+  return out.slice(0, n)
+}
+export function pickSession(type: GType | 'mixed', log: GLogRow[], n = 12, now = Date.now()): GItem[] {
+  const st = itemStates(log, now)
+  if (type !== 'mixed') return pickForType(type, st, typeLevel(log, type), n, new Set()).sort((a, b) => a.diff - b.diff)
+  const types: GType[] = ['analogy', 'sentence', 'word', 'numshape', 'figural']
+  const per = Math.ceil(n / types.length)
+  const taken = new Set<string>()
+  const lists = types.map((t) => pickForType(t, st, typeLevel(log, t), per, taken))
+  const out: GItem[] = []
+  for (let k = 0; out.length < n && k < per; k++) for (const l of lists) if (l[k] && out.length < n) out.push(l[k])
+  return out.sort((a, b) => a.diff - b.diff)
 }
