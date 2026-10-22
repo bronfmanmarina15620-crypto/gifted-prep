@@ -338,29 +338,37 @@ function kindSummary(rows: ExerciseLog[]): string {
   <table class="xlog-t"><tr><th>סוג</th><th>תרגילים</th><th>נכון בניסיון ראשון</th></tr>${ks.map((x) => `<tr><td>${kname(x.k)}</td><td>${x.n}</td><td>${Math.round((x.first / x.n) * 100)}%</td></tr>`).join('')}</table>
   <p class="note">הטבלה מסודרת מהקשה לקל.</p>`
 }
-const OUT = { first: '✅ נכון בניסיון הראשון', solved: '🟡 נכון אחרי כמה ניסיונות', help: '🔴 כדאי להסביר עם מבוגר' }
+const GROUPS: [string, string, (r: ExerciseLog) => boolean][] = [
+  ['g1', '✅ נכון מיד', (r) => r.outcome === 'first'],
+  ['g2', '🟡 נכון בניסיון השני', (r) => r.outcome === 'solved' && r.attempts <= 2],
+  ['g3', '🟠 נכון בניסיון השלישי', (r) => r.outcome === 'solved' && r.attempts >= 3],
+  ['g4', '🔴 צריך הסבר', (r) => r.outcome === 'help'],
+]
+function card(r: ExerciseLog): string {
+  const it = bankItem(r.itemId)
+  const tm = new Date(r.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+  const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא נבחרה תשובה'
+  const ok = it ? optText(it, L[it.correct]) : ''
+  return `<div class="log-row c ${r.outcome}"><div class="lr-top"><b>${esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</b><small>${tm} · ${secs(r.ms)}</small></div>
+    <div class="lr-meta">${kname(kindOf(r.itemId))} · נבחר: <b>${ans}</b>${ok ? ` · נכון: <b>${ok}</b>` : ''}</div></div>`
+}
 function renderDays(log: ExerciseLog[]): string {
   if (!log.length) return '<p class="note">עוד אין תרגול.</p>'
   const by: Record<string, ExerciseLog[]> = {}
   ;[...log].sort((a, b) => b.at - a.at).forEach((r) => (by[r.date] ||= []).push(r))
-  return Object.entries(by).slice(0, 30).map(([d, rs], di) => {
-    const first = rs.filter((r) => r.outcome === 'first').length, solved = rs.filter((r) => r.outcome === 'solved').length, help = rs.filter((r) => r.outcome === 'help').length
+  return `<p class="note">לוחצים על יום כדי לראות פירוט.</p>` + Object.entries(by).slice(0, 60).map(([d, rs]) => {
+    const cnt = (f: (r: ExerciseLog) => boolean) => rs.filter(f).length
     const avg = rs.reduce((a, r) => a + (r.ms || 0), 0) / rs.length
     const dn = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'][new Date(d + 'T12:00').getDay()]
-    const items = rs.map((r) => {
-      const it = bankItem(r.itemId)
-      const tm = new Date(r.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-      const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא ענה'
-      const ok = it ? optText(it, L[it.correct]) : ''
-      return `<div class="log-row ${r.outcome}"><div class="lr-top"><b>${kname(kindOf(r.itemId))}</b><small>${tm}</small></div>
-        <div class="lr-q">${esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</div>
-        <div class="lr-meta">${OUT[r.outcome]} · זמן: ${secs(r.ms)}</div>
-        <div class="lr-meta">התשובות שנבחרו: <b>${ans}</b>${ok ? ` · התשובה הנכונה: <b>${ok}</b>` : ''}</div></div>`
+    const byType: Record<string, ExerciseLog[]> = {}
+    rs.forEach((r) => (byType[r.type] ||= []).push(r))
+    const topics = Object.entries(byType).map(([t, trs]) => {
+      const groups = GROUPS.map(([, name, f]) => { const g = trs.filter(f); return g.length ? `<details class="grp"><summary>${name} <b>(${g.length})</b></summary>${g.map(card).join('')}</details>` : '' }).join('')
+      return `<div class="topic"><div class="topic-h">${label(t)} · ${trs.length} תרגילים</div>${groups}</div>`
     }).join('')
-    return `<div class="day-card"><h4>יום ${dn}, ${d.split('-').reverse().slice(0, 2).join('.')}</h4>
-      <div class="day-stats"><span><b>${rs.length}</b> תרגילים</span><span>✅ <b>${first}</b> נכון מיד</span><span>🟡 <b>${solved}</b> אחרי כמה ניסיונות</span><span>🔴 <b>${help}</b> צריך הסבר</span><span>⏱ <b>${secs(avg)}</b> בממוצע</span></div>
-      <p class="day-line">${easyHard(rs)}</p>${onlyOneNote(rs, true)}
-      <details ${di === 0 ? 'open' : ''}><summary>כל התרגילים של היום (${rs.length})</summary>${items}</details></div>`
+    return `<details class="day-card"><summary class="day-sum"><span class="day-d">יום ${dn}, ${d.split('-').reverse().slice(0, 2).join('.')}</span>
+      <span class="day-c">${rs.length} תרגילים · ✅ ${cnt(GROUPS[0][2])} · 🟡 ${cnt(GROUPS[1][2])} · 🟠 ${cnt(GROUPS[2][2])} · 🔴 ${cnt(GROUPS[3][2])}</span></summary>
+      <p class="day-line">⏱ ${secs(avg)} בממוצע לתרגיל. ${easyHard(rs)}</p>${onlyOneNote(rs, true)}${topics}</details>`
   }).join('')
 }
 function renderPin(): void {
