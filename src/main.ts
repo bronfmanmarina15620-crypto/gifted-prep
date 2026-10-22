@@ -353,7 +353,7 @@ function renderDays(log: ExerciseLog[]): string {
       const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא ענה'
       const ok = it ? optText(it, L[it.correct]) : ''
       return `<div class="log-row ${r.outcome}"><div class="lr-top"><b>${kname(kindOf(r.itemId))}</b><small>${tm}</small></div>
-        <div class="lr-q">${esc((r.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</div>
+        <div class="lr-q">${esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</div>
         <div class="lr-meta">${OUT[r.outcome]} · זמן: ${secs(r.ms)}</div>
         <div class="lr-meta">התשובות שנבחרו: <b>${ans}</b>${ok ? ` · התשובה הנכונה: <b>${ok}</b>` : ''}</div></div>`
     }).join('')
