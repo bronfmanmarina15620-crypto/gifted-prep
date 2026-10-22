@@ -326,9 +326,10 @@ function easyHard(rows: ExerciseLog[]): string {
   if (!parts.length) parts.push('לא היה משהו קל במיוחד או קשה במיוחד.')
   return parts.join(' ')
 }
-function onlyOneNote(rows: ExerciseLog[]): string {
+function onlyOneNote(rows: ExerciseLog[], day = false): string {
   const types = new Set(rows.map((r) => r.type))
-  return types.size === 1 ? `<p class="note">ℹ️ כרגע תורגל רק נושא אחד (${label([...types][0])}) – שאר הנושאים עוד לא התחילו.</p>` : ''
+  if (types.size !== 1) return ''
+  return day ? `<p class="note">ℹ️ היום תורגל רק נושא אחד: ${label([...types][0])}.</p>` : `<p class="note">ℹ️ כרגע תורגל רק נושא אחד (${label([...types][0])}) – שאר הנושאים עוד לא התחילו.</p>`
 }
 function kindSummary(rows: ExerciseLog[]): string {
   if (!rows.length) return '<p class="note">עוד אין תרגול.</p>'
@@ -358,7 +359,7 @@ function renderDays(log: ExerciseLog[]): string {
     }).join('')
     return `<div class="day-card"><h4>יום ${dn}, ${d.split('-').reverse().slice(0, 2).join('.')}</h4>
       <div class="day-stats"><span><b>${rs.length}</b> תרגילים</span><span>✅ <b>${first}</b> נכון מיד</span><span>🟡 <b>${solved}</b> אחרי כמה ניסיונות</span><span>🔴 <b>${help}</b> צריך הסבר</span><span>⏱ <b>${secs(avg)}</b> בממוצע</span></div>
-      <p class="day-line">${easyHard(rs)}</p>${onlyOneNote(rs)}
+      <p class="day-line">${easyHard(rs)}</p>${onlyOneNote(rs, true)}
       <details ${di === 0 ? 'open' : ''}><summary>כל התרגילים של היום (${rs.length})</summary>${items}</details></div>`
   }).join('')
 }
