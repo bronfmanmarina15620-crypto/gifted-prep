@@ -334,10 +334,22 @@ const GROUPS: [string, string, (r: ExerciseLog) => boolean][] = [
 function card(r: ExerciseLog): string {
   const it = bankItem(r.itemId)
   const tm = new Date(r.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+  const title = esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))
   const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא נבחרה תשובה'
-  const ok = it ? optText(it, L[it.correct]) : ''
-  return `<div class="log-row c ${r.outcome}"><div class="lr-top"><b>${esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))}</b><small>${tm} · ${secs(r.ms)}</small></div>
-    <div class="lr-meta">${kname(kindOf(r.itemId))} · נבחר: <b>${ans}</b>${ok ? ` · נכון: <b>${ok}</b>` : ''}</div></div>`
+  let body: string
+  if (it) {
+    const opts = it.options.map((o, k) => {
+      const tries = r.answers.map((a, n) => (a === L[k] ? n + 1 : 0)).filter(Boolean)
+      const ok = k === it.correct
+      const tags = [...tries.map((n) => `<span class="ex-tag ${ok ? 'good' : 'bad'}">ניסיון ${n}</span>`), ok ? '<span class="ex-tag key">✓ התשובה הנכונה</span>' : ''].join('')
+      return `<div class="opt ex-opt${ok ? ' is-key' : ''}${tries.length && !ok ? ' is-wrong' : ''}"><span class="g-letter">${L[k]}.</span> <span class="g-optbody">${o}</span><div class="ex-tags">${tags}</div></div>`
+    }).join('')
+    body = `<div class="qcard gcard ex-q"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div><div class="opt-grid g-opts">${opts}</div></div>`
+  } else body = '<p class="note">התרגיל הזה כבר לא נמצא במאגר.</p>'
+  const res = r.outcome === 'first' ? 'נכון מיד' : r.outcome === 'solved' ? `נפתר בניסיון ${r.attempts}` : 'לא נפתר אחרי 3 ניסיונות'
+  return `<details class="log-row c ex ${r.outcome}"><summary class="lr-top"><b>${title}</b><small>${tm}</small></summary>
+    <div class="ex-body"><div class="lr-meta">${kname(kindOf(r.itemId))} · ${res} · ניסיונות: <b>${r.attempts}</b> · זמן: <b>${secs(r.ms)}</b></div>
+    <div class="lr-meta">סדר הבחירות: <b>${ans}</b></div>${body}</div></details>`
 }
 function renderDays(log: ExerciseLog[]): string {
   if (!log.length) return '<p class="note">עוד אין תרגול.</p>'

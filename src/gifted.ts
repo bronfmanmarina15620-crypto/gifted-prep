@@ -396,7 +396,8 @@ function buildNumShapes(): GItem[] {
   const crules: ((a: number, b: number) => number)[] = [(a, b) => a + b, (a, b) => a + b + 1, (a, b) => a * b, (a, b) => a * b - 1, (a, b) => (a + b) * 2, (a, b) => a * 2 + b]
   for (let i = 0; i < 18; i++) {
     const f = crules[i % crules.length]
-    const tr = [0, 1, 2].map(() => [ri(2, 9), ri(1, 6)])
+    let tr = [0, 1, 2].map(() => [ri(2, 9), ri(1, 6)])
+    if (i === 3) tr = [[3, 4], [5, 2], [9, 2]] // fix: old examples also fit "a − b" (answer 7 not offered)
     const ans = f(tr[2][0], tr[2][1])
     const [a, b] = tr[2]
     const stem = `<div class="g-row" dir="ltr">${circ(tr[0][0], tr[0][1], f(tr[0][0], tr[0][1]))}${circ(tr[1][0], tr[1][1], f(tr[1][0], tr[1][1]))}${circ(a, b, '?')}</div>`
