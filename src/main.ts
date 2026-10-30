@@ -334,7 +334,7 @@ const GROUPS: [string, string, (r: ExerciseLog) => boolean][] = [
 function card(r: ExerciseLog): string {
   const it = bankItem(r.itemId)
   const tm = new Date(r.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-  const title = esc((r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))
+  const title = esc(strip(r.plain || it?.plain || r.itemId).replace(/^[^:]{0,20}:\s*/, ''))
   const ans = r.answers.length ? r.answers.map((a) => optText(it, a)).join(' ← ') : 'לא נבחרה תשובה'
   let body: string
   if (it) {
@@ -347,7 +347,7 @@ function card(r: ExerciseLog): string {
     body = `<div class="qcard gcard ex-q"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div><div class="opt-grid g-opts">${opts}</div></div>`
   } else body = '<p class="note">התרגיל הזה כבר לא נמצא במאגר.</p>'
   const res = r.outcome === 'first' ? 'נכון מיד' : r.outcome === 'solved' ? `נפתר בניסיון ${r.attempts}` : 'לא נפתר אחרי 3 ניסיונות'
-  return `<details class="log-row c ex ${r.outcome}"><summary class="lr-top"><b>${title}</b><small>${tm}</small></summary>
+  return `<details class="log-row c ex ${r.outcome}"><summary class="lr-top"><span class="ex-t"><b>${title}</b><span class="ex-open">👁 לראות את התרגיל המלא</span><span class="ex-close">▲ סגירה</span></span><small>${tm}</small></summary>
     <div class="ex-body"><div class="lr-meta">${kname(kindOf(r.itemId))} · ${res} · ניסיונות: <b>${r.attempts}</b> · זמן: <b>${secs(r.ms)}</b></div>
     <div class="lr-meta">סדר הבחירות: <b>${ans}</b></div>${body}</div></details>`
 }

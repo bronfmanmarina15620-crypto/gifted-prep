@@ -531,3 +531,7 @@ details.ex[open]>summary b::before{content:'▾ '}
 .ex-tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:4px}
 .ex-tag{font-size:12px;font-weight:700;border-radius:10px;padding:1px 7px;color:#fff}
 .ex-tag.bad{background:#e5533d}.ex-tag.good{background:#2e9e5b}.ex-tag.key{background:#fff;color:#2e9e5b;border:1px solid #2e9e5b}
+.ex-t{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.ex-open,.ex-close{font-size:12px;font-weight:700;color:#5b3fd1;background:#efeaff;border:1px solid #c9bcff;border-radius:12px;padding:2px 10px}
+.ex-close{display:none}details.ex[open] .ex-open{display:none}details.ex[open] .ex-close{display:inline-block}
+details.ex>summary b::before{content:none}
