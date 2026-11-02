@@ -1,4 +1,5 @@
 import { buildMore } from './gifted_more'
+import { buildOfficial } from './gifted_official'
 /** Original Hebrew item bank for gifted stage-B style practice — all items written for this project. */
 
 export type GType = 'analogy' | 'sentence' | 'word' | 'numshape' | 'figural'
@@ -828,6 +829,7 @@ export const GIFTED_BANK: GItem[] = [
   ...buildWordProblems2(),
   ...buildNumShapes2(),
   ...buildMore({ pack, rng, nums }),
+  ...buildOfficial({ pack, rng, nums }),
 ]
 
 export type GStats = Record<string, { tries: number; fails: number; firstOk: number; last: number; lastFail: number }>
@@ -872,13 +874,22 @@ export const GIFTED_TIPS: Record<GType, string> = {
 
 /** Exam chapter: easy→hard ordering (3 easy, 4 medium, 3 hard when available). */
 export function pickExamChapter(type: GType, n = 10, seen?: Record<string, number>): GItem[] {
+  // one item per format in turn (least-seen format first), levels spread 3 easy / 4 medium / 3 hard
   const pool = GIFTED_BANK.filter((it) => it.type === type)
-  const by = (d: number) => pool.filter((it) => it.diff === d).map((it) => [it, (seen?.[it.id] ?? 0) + Math.random()] as const).sort((a, b) => a[1] - b[1]).map((x) => x[0])
-  const want: [number, number][] = [[1, 3], [2, 4], [3, 3]]
+  const fseen = new Map<string, number>()
+  for (const [id, k] of Object.entries(seen ?? {})) fseen.set(formatOf(id), (fseen.get(formatOf(id)) ?? 0) + k)
+  const groups = new Map<string, GItem[]>()
+  for (const it of pool) { const f = formatOf(it.id); if (!groups.has(f)) groups.set(f, []); groups.get(f)!.push(it) }
+  const fmts = [...groups.keys()].sort((a, b) => fmtKey(fseen, a) - fmtKey(fseen, b) || Math.random() - 0.5)
+  const want: number[] = [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
   const out: GItem[] = []
-  for (const [d, k] of want) out.push(...by(d).slice(0, k))
-  const rest = pool.filter((it) => !out.includes(it)).sort(() => Math.random() - 0.5)
-  while (out.length < n && rest.length) out.push(rest.pop()!)
+  for (let i = 0; out.length < n && i < n * 4; i++) {
+    const g = groups.get(fmts[i % fmts.length])!.filter((it) => !out.includes(it))
+    if (!g.length) continue
+    const d = want[out.length % want.length]
+    const sc = (it: GItem) => Math.abs(it.diff - d) * 10 + (seen?.[it.id] ?? 0) + Math.random()
+    out.push(g.sort((a, b) => sc(a) - sc(b))[0])
+  }
   return out.sort((a, b) => a.diff - b.diff)
 }
 
@@ -890,7 +901,7 @@ export const KIND_HE: Record<string, string> = {
   anfill: 'השלמת זוג מילים', sconn: 'מילות קישור (לכן, אבל, כי...)', svocab: 'בחירת המילה המתאימה',
   wstory: 'סיפור עם חשבון', wmissing: 'מספר חסר וחלוקה', wratio: 'מחירים, חלקים וגילאים', wlogic: 'חידות היגיון', wdigits: 'חידות ספרות',
   ntri: 'משולשים', nsquare: 'ריבועים', ngrid: 'טבלת מספרים', ncirc: 'עיגולים', narrow: 'שרשרת חצים', npyr: 'פירמידות',
-  grammar: 'זמנים ודקדוק', wtime: 'שעון וזמן', wrate: 'קצב עבודה', nring: 'עיגול לפי כיוון השעון', nchain: 'חצים חוזרים', ntwostep: 'טבלה בשני שלבים', fodd: 'יוצא דופן',
+  grammar: 'זמנים ודקדוק', wtime: 'שעון וזמן', wrate: 'קצב עבודה', nring: 'עיגול לפי כיוון השעון', nchain: 'חצים חוזרים', ntwostep: 'טבלה בשני שלבים', noper: 'אליפסה, ריבוע ואליפסה', nbranch: 'עיגול שמתפצל לשניים', fdots: 'עיגולים עם נקודות', fpoly: 'מצולעים בתוך עיגול', fmatrix: 'טבלת 3×3', fodd: 'יוצא דופן',
   fseries: 'סדרת צורות', ftable: 'טבלת צורות', fcarpet: 'שטיח עם חלק חסר',
 }
 const BANK_BY_ID: Record<string, GItem> = Object.fromEntries(GIFTED_BANK.map((it) => [it.id, it]))
@@ -942,16 +953,33 @@ export function typeLevel(log: GLogRow[], type: GType): 1 | 2 | 3 {
   return lvl
 }
 function shuffled<T>(a: T[]): T[] { return a.map((x) => [x, Math.random()] as const).sort((p, q) => p[1] - q[1]).map((p) => p[0]) }
+/** Format = id prefix (one renderer / question layout). */
+export const formatOf = (id: string) => { const p = id.replace(/\d+[a-c]?$/, ''); return p === 'sb' ? 'se' : p }
+let FMT_SEEN = new Map<string, number>()
+// formats laid out like the public Ministry demo test come first when counts are equal
+const OFFICIAL_FMT = new Set(['nc', 'ps', 'pt', 'np', 'po', 'na', 'pb', 'nx', 'fg', 'pd', 'pc', 'fp', 'pm', 'fr', 'fy', 'fl', 'pk', 'fc'])
+const fmtKey = (m: Map<string, number>, f: string) => (m.get(f) ?? 0) - (OFFICIAL_FMT.has(f) ? 0.5 : 0)
+function countFormats(log: GLogRow[]) { FMT_SEEN = new Map(); for (const r of log) { const f = formatOf(r.itemId); FMT_SEEN.set(f, (FMT_SEEN.get(f) ?? 0) + 1) } }
 function pickForType(type: GType, st: Record<string, ItemState>, lvl: number, n: number, taken: Set<string>): GItem[] {
   const pool = GIFTED_BANK.filter((it) => it.type === type && !taken.has(it.id))
   const oldest = (a: GItem, b: GItem) => st[a.id].last - st[b.id].last
   const fails = pool.filter((it) => st[it.id]?.kind === 'fail').sort(oldest).slice(0, Math.ceil(n / 3))
-  const checks = pool.filter((it) => st[it.id]?.kind === 'check').sort(oldest).slice(0, Math.max(2, Math.floor(n / 4)))
+  const checks = pool.filter((it) => st[it.id]?.kind === 'check').sort(oldest).slice(0, Math.max(n >= 8 ? 2 : 1, Math.floor(n / 4)))
   const out = [...fails, ...checks]
-  const unseen = pool.filter((it) => !st[it.id])
-  for (const d of [lvl, lvl + 1, lvl - 1, lvl + 2, lvl - 2]) {
-    if (out.length >= n) break
-    out.push(...shuffled(unseen.filter((it) => it.diff === d)).slice(0, n - out.length))
+  // unseen: round-robin over the formats of this type, least-practised format first,
+  // so every format (even one that has only harder items) comes up within a session or two.
+  const unseen = pool.filter((it) => !st[it.id] && !out.includes(it))
+  const groups = new Map<string, GItem[]>()
+  for (const it of shuffled(unseen)) { const f = formatOf(it.id); if (!groups.has(f)) groups.set(f, []); groups.get(f)!.push(it) }
+  const fmts = [...groups.keys()].sort((a, b) => fmtKey(FMT_SEEN, a) - fmtKey(FMT_SEEN, b) || Math.random() - 0.5)
+  while (out.length < n && fmts.some((f) => groups.get(f)!.length)) {
+    for (const f of fmts) {
+      if (out.length >= n) break
+      const g = groups.get(f)!
+      if (!g.length) continue
+      g.sort((a, b) => Math.abs(a.diff - lvl) - Math.abs(b.diff - lvl))
+      out.push(g.shift()!)
+    }
   }
   // bank exhausted: least-recently seen first (waiting, then retired)
   for (const k of ['wait', 'retired']) {
@@ -962,11 +990,14 @@ function pickForType(type: GType, st: Record<string, ItemState>, lvl: number, n:
 }
 export function pickSession(type: GType | 'mixed', log: GLogRow[], n = 12, now = Date.now()): GItem[] {
   const st = itemStates(log, now)
+  countFormats(log)
   if (type !== 'mixed') return pickForType(type, st, typeLevel(log, type), n, new Set()).sort((a, b) => a.diff - b.diff)
   const types: GType[] = ['analogy', 'sentence', 'word', 'numshape', 'figural']
-  const per = Math.ceil(n / types.length)
+  // more slots for the types that have more formats (numbers in shapes, shapes)
+  const share: Record<GType, number> = { analogy: 2, sentence: 2, word: 2, numshape: 3, figural: 3 }
+  const per = Math.max(...Object.values(share)) * Math.ceil(n / 12)
   const taken = new Set<string>()
-  const lists = types.map((t) => pickForType(t, st, typeLevel(log, t), per, taken))
+  const lists = types.map((t) => pickForType(t, st, typeLevel(log, t), share[t] * Math.ceil(n / 12), taken))
   const out: GItem[] = []
   for (let k = 0; out.length < n && k < per; k++) for (const l of lists) if (l[k] && out.length < n) out.push(l[k])
   return out.sort((a, b) => a.diff - b.diff)
