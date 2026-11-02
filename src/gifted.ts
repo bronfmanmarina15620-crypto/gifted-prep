@@ -1,3 +1,4 @@
+import { buildMore } from './gifted_more'
 /** Original Hebrew item bank for gifted stage-B style practice — all items written for this project. */
 
 export type GType = 'analogy' | 'sentence' | 'word' | 'numshape' | 'figural'
@@ -21,6 +22,7 @@ export type GItem = {
   plain: string // short text description for the help list (does not include answer)
   diff: 1 | 2 | 3
   kind?: string // sub-kind label key (v2 items)
+  prompt?: string // overrides the type prompt (v3 items)
 }
 
 function rng(seed: number) {
@@ -825,6 +827,7 @@ export const GIFTED_BANK: GItem[] = [
   ...buildSentences2(),
   ...buildWordProblems2(),
   ...buildNumShapes2(),
+  ...buildMore({ pack, rng, nums }),
 ]
 
 export type GStats = Record<string, { tries: number; fails: number; firstOk: number; last: number; lastFail: number }>
@@ -887,6 +890,7 @@ export const KIND_HE: Record<string, string> = {
   anfill: 'השלמת זוג מילים', sconn: 'מילות קישור (לכן, אבל, כי...)', svocab: 'בחירת המילה המתאימה',
   wstory: 'סיפור עם חשבון', wmissing: 'מספר חסר וחלוקה', wratio: 'מחירים, חלקים וגילאים', wlogic: 'חידות היגיון', wdigits: 'חידות ספרות',
   ntri: 'משולשים', nsquare: 'ריבועים', ngrid: 'טבלת מספרים', ncirc: 'עיגולים', narrow: 'שרשרת חצים', npyr: 'פירמידות',
+  grammar: 'זמנים ודקדוק', wtime: 'שעון וזמן', wrate: 'קצב עבודה', nring: 'עיגול לפי כיוון השעון', nchain: 'חצים חוזרים', ntwostep: 'טבלה בשני שלבים', fodd: 'יוצא דופן',
   fseries: 'סדרת צורות', ftable: 'טבלת צורות', fcarpet: 'שטיח עם חלק חסר',
 }
 const BANK_BY_ID: Record<string, GItem> = Object.fromEntries(GIFTED_BANK.map((it) => [it.id, it]))
