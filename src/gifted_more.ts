@@ -269,7 +269,7 @@ function buildNumMore(h: H): GItem[] {
     if (fits(1, 2) !== 1 || fits(0, 1) !== 1) continue
     const right = rows[2][2]
     const cell = (v: number | string) => `<td>${v}</td>`
-    const tbl = `<table class="g-numgrid" dir="ltr">${rows.map((x, j) => `<tr>${cell(x[0])}${cell('➜')}${cell(x[1])}${cell('➜')}${cell(j === 2 ? '?' : x[2])}</tr>`).join('')}</table>`
+    const tbl = `<table class="g-numgrid g-arrowgrid" dir="ltr">${rows.map((x, j) => `<tr>${cell(x[0])}${cell('➜')}${cell(x[1])}${cell('➜')}${cell(j === 2 ? '?' : x[2])}</tr>`).join('')}</table>`
     const it = h.pack(`nz${made}`, 'numshape', `<div class="g-sent">בכל שורה עושים אותו דבר: משמאל לאמצע תרגיל אחד, ומהאמצע לימין תרגיל אחר.</div>${tbl}`, String(right),
       h.nums(right, [o1.f(right) ?? right + 3, right + 1, right - 2, rows[2][1], right * 2]), `טבלת שני שלבים: ${rows.map((x) => x.join(' ➜ ')).join(' | ')}`, r, d)
     it.kind = 'ntwostep'; it.prompt = 'איזה מספר חסר בטבלה?'
