@@ -303,6 +303,6 @@ export function buildOfficial(h: H): GItem[] {
   const sect = finish(twoArg(h, 7401, SECT, (ri, d) => [ri(d === 3 ? 2 : 3, d === 1 ? 15 : 9), ri(1, d === 1 ? 9 : 6)].sort((a, b) => b - a) as [number, number],
     (ex) => `<div class="g-sent">בכל עיגול, המספר שלמטה בא משני המספרים שלמעלה, לפי אותו כלל.</div>${svg(380, 98, ex.map(([a, b, c], i) => sectCircle(a, b, c, 320 - i * 128)).join(''))}`), 36, 'ps', 'ncirc', 'איזה מספר חסר בעיגול?')
   const oper = finish(twoArg(h, 7403, OPER, (ri, d) => [ri(2, d === 1 ? 20 : 9), ri(1, d === 1 ? 9 : 5)],
-    (ex) => `<div class="g-sent">המספר בריבוע אומר כמה להפעיל. בכל השורות אותו תרגיל.</div>${svg(290, 168, ex.map(([a, k, c], i) => operRow(a, k, c, 28 + i * 56)).join(''))}`), 36, 'po', 'noper', 'איזה מספר חסר באליפסה?')
+    (ex) => `<div class="g-sent">המספר בריבוע אומר כמה להפעיל. בכל השורות אותו תרגיל.</div>${svg(290, 192, `<text x="44" y="14" text-anchor="middle" font-size="13" fill="#556">מספר</text><text x="145" y="14" text-anchor="middle" font-size="13" fill="#556">מספר בריבוע</text><text x="246" y="14" text-anchor="middle" font-size="13" fill="#556">תוצאה</text>` + ex.map(([a, k, c], i) => operRow(a, k, c, 50 + i * 56)).join(''))}`), 36, 'po', 'noper', 'איזה מספר חסר באליפסה?')
   return [...sect, ...buildPyr(h), ...oper, ...buildBranch(h), ...buildDotSeries(h), ...buildPolySeries(h), ...buildDotMatrix(h), ...buildCarpet(h)]
 }

@@ -24,6 +24,8 @@ export type GItem = {
   diff: 1 | 2 | 3
   kind?: string // sub-kind label key (v2 items)
   prompt?: string // overrides the type prompt (v3 items)
+  how?: string // clear instruction: what to look for (never the rule itself)
+  retired?: boolean // kept only so old log rows still open; never picked again
 }
 
 function rng(seed: number) {
@@ -340,7 +342,7 @@ function buildWordProblems(): GItem[] {
   ;[[13, 5, 2], [15, 4, 1], [16, 6, 3], [14, 5, 3], [17, 6, 2], [19, 7, 4]].forEach(([depth, up, down], k) => {
     let h = 0, n = 0
     while (true) { n++; h += up; if (h >= depth) break; h -= down }
-    const q = `סנאי רוצה להגיע לאגוז בראש עמוד שגובהו ${depth} מטרים. בכל דקה הוא מטפס ${up} מטרים, ואז נח ומחליק ${down} מטרים למטה (אם עוד לא הגיע). בסוף איזו דקה הוא יגיע לאגוז?`
+    const q = `סנאי רוצה להגיע לאגוז בראש עמוד שגובהו ${depth} מטרים. בכל דקה הוא מטפס ${up} מטרים, ואז נח ומחליק ${down === 1 ? 'מטר אחד' : down + ' מטרים'} למטה (אם עוד לא הגיע לאגוז). בסוף איזו דקה (ראשונה, שנייה, שלישית...) הוא יגיע לאגוז?`
     items.push(pack(`wt${k}`, 'word', `<div class="g-sent">${q}</div>`, String(n), nums(n, [Math.ceil(depth / (up - down)), n + 1, Math.ceil(depth / up)]), `בעיית היגיון: ${q}`, r, 3))
   })
   ;[[30, 4, 6], [25, 3, 7], [40, 8, 5], [35, 6, 2]].forEach(([c, a, b], k) => {
@@ -832,6 +834,53 @@ export const GIFTED_BANK: GItem[] = [
   ...buildOfficial({ pack, rng, nums }),
 ]
 
+// ---------- v5: one clear instruction per format (what to look for, not the rule) ----------
+const HOW_TABLE_F = 'בכל שורה הצורות משתנות לפי אותו כלל. בדקו מה קורה בשתי השורות הראשונות, ועשו אותו דבר בשורה האחרונה.'
+const HOW_SERIES_F = 'הצורות משתנות משמאל לימין לפי כלל קבוע: למשל סיבוב, מספר, צבע או גודל. בדקו מה משתנה בכל צעד, ובחרו את הצורה שבאה במקום סימן השאלה.'
+const HOW_SENT = 'קראו את המשפט עם כל תשובה. כשיש שני קווים, המילה הראשונה בתשובה נכנסת לקו הראשון והשנייה לקו השני. בחרו את התשובה שבה כל המשפט נכון והגיוני.'
+const HOW_FILL = 'מה הקשר בין שתי המילים בשורה הראשונה? חפשו מילה שקשורה למילה בשורה השנייה באותה דרך בדיוק.'
+const HOW_PAIR = 'קודם אומרים במשפט מה הקשר בין שתי המילים שלמעלה (למשל: «ציפור גרה בקן»). אחר כך בודקים איזה זוג בתשובות קשור באותה דרך ובאותו סדר.'
+const HOW_CIRC = 'בכל עיגול, המספר שבחצי התחתון בא משני המספרים שבחלק העליון. בכל העיגולים זה אותו חשבון. מצאו את החשבון בעיגולים המלאים והשלימו את העיגול עם סימן השאלה.'
+const HOW_PYR = 'כל מספר בפירמידה בא משני המספרים שמתחתיו, ובכל הפירמידה זה אותו חשבון. מצאו את החשבון בפירמידה המלאה, והשלימו את המספר החסר.'
+export const FORMAT_HOW: Record<string, { prompt?: string; how: string }> = {
+  an: { prompt: 'איזה זוג מילים קשור באותה דרך כמו הזוג שלמעלה?', how: HOW_PAIR },
+  aa: { prompt: 'איזה זוג מילים קשור באותה דרך כמו הזוג שלמעלה?', how: HOW_PAIR },
+  af: { prompt: 'איזו מילה חסרה?', how: HOW_FILL },
+  ag: { prompt: 'איזו מילה חסרה?', how: HOW_FILL },
+  se: { how: HOW_SENT }, sb: { how: HOW_SENT }, sc: { how: HOW_SENT },
+  ns: { prompt: 'איזה מספר חסר במשולש האחרון?', how: 'בכל משולש, המספר הגדול שבאמצע בא משלושת המספרים שבפינות. בכל המשולשים זה אותו חשבון. מצאו את החשבון בשני המשולשים הראשונים והשלימו את השלישי.' },
+  nc: { prompt: 'איזה מספר חסר בעיגול?', how: HOW_CIRC },
+  ps: { prompt: 'איזה מספר חסר בעיגול?', how: HOW_CIRC },
+  nq: { prompt: 'איזה מספר חסר בריבוע האחרון?', how: 'בכל ריבוע, המספר הגדול שבאמצע בא מארבעת המספרים שבפינות. בכל הריבועים זה אותו חשבון. מצאו אותו בשני הריבועים הראשונים.' },
+  ng: { prompt: 'איזה מספר חסר בטבלה?', how: 'בכל שורה, המספר שבצד ימין בא משני המספרים שמשמאלו. בכל השורות זה אותו חשבון. מצאו אותו בשורות המלאות והשלימו את השורה האחרונה.' },
+  na: { prompt: 'איזה מספר חסר בעיגול?', how: 'המספר שבריבוע יוצא בחץ שמאלה ובחץ ימינה. החץ השמאלי עושה תמיד אותו חשבון, וגם החץ הימני עושה תמיד אותו חשבון (יכול להיות חשבון אחר). בדקו בשורה הראשונה מה עושה כל חץ.' },
+  np: { prompt: 'איזה מספר חסר בפירמידה?', how: HOW_PYR },
+  pt: { prompt: 'איזה מספר חסר בראש הפירמידה?', how: HOW_PYR },
+  po: { prompt: 'איזה מספר חסר באליפסה?', how: 'בכל שורה לוקחים את המספר שבאליפסה השמאלית ואת המספר שבריבוע, ועושים איתם חשבון. התוצאה כתובה באליפסה הימנית. בכל השורות זה אותו חשבון בדיוק: חיבור, חיסור, כפל, או שניים מהם יחד. מצאו את החשבון בשתי השורות הראשונות והשלימו את השורה האחרונה.' },
+  pb: { prompt: 'איזה מספר חסר בעיגול?', how: 'מהעיגול העליון יוצאים שני חצים. החץ השמאלי עושה תמיד אותו חשבון, והחץ הימני עושה תמיד חשבון משלו. מצאו מה עושה כל חץ בציורים המלאים והשלימו את הציור עם סימן השאלה.' },
+  nr: { prompt: 'איזה מספר חסר בעיגול?', how: 'המספרים מסודרים לפי כיוון השעון ↻ ומתחילים מהעיגול הצהוב. בדקו איך המספר משתנה מעיגול לעיגול, והשלימו את החסר.' },
+  nx: { prompt: 'איזה מספר חסר בסוף השרשרת?', how: 'בשורה הראשונה רואים מה עושה חץ אחד ➜ (תמיד אותו חשבון). שני חצים ➜➜ = עושים את אותו חשבון פעמיים, שלושה חצים = שלוש פעמים. השלימו את השורה השנייה.' },
+  nz: { prompt: 'איזה מספר חסר בטבלה?', how: 'בכל שורה הולכים לפי החצים: מהמספר השמאלי לאמצעי עושים חשבון אחד, ומהאמצעי לימני עושים חשבון אחר. בכל השורות אלה אותם שני חשבונות.' },
+  fo: { prompt: 'איזו צורה יוצאת דופן?', how: 'שלוש צורות מתאימות לאותו כלל, ואחת לא. הכלל יכול להיות סוג הצורה, מספר הנקודות, או הקשר בין הנקודות למספר הצלעות. מצאו את הצורה שלא מתאימה.' },
+  fc: { prompt: 'איזו חתיכה משלימה את השטיח?', how: 'בשטיח יש דוגמה שחוזרת על עצמה. הסתכלו על החתיכות שמסביב לסימן השאלה (מימין, משמאל, מלמעלה ומלמטה), ובחרו את החתיכה שממשיכה את הדוגמה בדיוק, כולל צבע וכיוון.' },
+  pk: { prompt: 'איזו חתיכה משלימה את השטיח?', how: 'בשטיח יש דוגמה שחוזרת על עצמה. הסתכלו על החתיכות שמסביב לסימן השאלה (מימין, משמאל, מלמעלה ומלמטה), ובחרו את החתיכה שממשיכה את הדוגמה בדיוק, כולל צבע וכיוון.' },
+  pm: { prompt: 'מה חסר בטבלה?', how: 'בכל שורה מספר הנקודות גדל באותה כמות מתיבה לתיבה. בדקו בכל שורה בכמה הוא גדל, והשלימו את התיבה החסרה.' },
+  fr: { prompt: 'מה חסר בטבלה?', how: HOW_TABLE_F }, fy: { prompt: 'מה חסר בטבלה?', how: HOW_TABLE_F }, fl: { prompt: 'מה חסר בטבלה?', how: 'בכל שורה ובכל עמודה כל צורה מופיעה פעם אחת בלבד. בדקו מה חסר בשורה ובעמודה של סימן השאלה.' },
+  fp: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, fq: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, fx: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F },
+  pd: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, pc: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F },
+}
+// questions the wide solver (tests/solver_all.py) found with more than one fitting option: never picked again
+const RETIRED = new Set(['na1', 'na3', 'na4', 'po23'])
+for (const it of GIFTED_BANK) {
+  const f = it.id.replace(/\d+[a-c]?$/, '')
+  let h = FORMAT_HOW[f]
+  if (f === 'fg') h = /טבל|שורות/.test(it.plain) ? { prompt: 'מה חסר בטבלה?', how: HOW_TABLE_F } : { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }
+  if (h) { if (h.prompt) it.prompt = h.prompt; it.how = h.how }
+  // the old one-line instruction inside the drawing is replaced by the clear one above
+  if (it.type === 'numshape' || it.type === 'figural') it.stem = it.stem.replace(/<div class="g-sent">[^<]*<\/div>/g, '')
+  if (RETIRED.has(it.id)) it.retired = true
+}
+
 export type GStats = Record<string, { tries: number; fails: number; firstOk: number; last: number; lastFail: number }>
 
 /** Adaptive pick: weight types by error rate (mixed) and items by past failures / unseen. */
@@ -875,7 +924,7 @@ export const GIFTED_TIPS: Record<GType, string> = {
 /** Exam chapter: easy→hard ordering (3 easy, 4 medium, 3 hard when available). */
 export function pickExamChapter(type: GType, n = 10, seen?: Record<string, number>): GItem[] {
   // one item per format in turn (least-seen format first), levels spread 3 easy / 4 medium / 3 hard
-  const pool = GIFTED_BANK.filter((it) => it.type === type)
+  const pool = GIFTED_BANK.filter((it) => it.type === type && !it.retired)
   const fseen = new Map<string, number>()
   for (const [id, k] of Object.entries(seen ?? {})) fseen.set(formatOf(id), (fseen.get(formatOf(id)) ?? 0) + k)
   const groups = new Map<string, GItem[]>()
@@ -961,7 +1010,7 @@ const OFFICIAL_FMT = new Set(['nc', 'ps', 'pt', 'np', 'po', 'na', 'pb', 'nx', 'f
 const fmtKey = (m: Map<string, number>, f: string) => (m.get(f) ?? 0) - (OFFICIAL_FMT.has(f) ? 0.5 : 0)
 function countFormats(log: GLogRow[]) { FMT_SEEN = new Map(); for (const r of log) { const f = formatOf(r.itemId); FMT_SEEN.set(f, (FMT_SEEN.get(f) ?? 0) + 1) } }
 function pickForType(type: GType, st: Record<string, ItemState>, lvl: number, n: number, taken: Set<string>): GItem[] {
-  const pool = GIFTED_BANK.filter((it) => it.type === type && !taken.has(it.id))
+  const pool = GIFTED_BANK.filter((it) => it.type === type && !it.retired && !taken.has(it.id))
   const oldest = (a: GItem, b: GItem) => st[a.id].last - st[b.id].last
   const fails = pool.filter((it) => st[it.id]?.kind === 'fail').sort(oldest).slice(0, Math.ceil(n / 3))
   const checks = pool.filter((it) => st[it.id]?.kind === 'check').sort(oldest).slice(0, Math.max(n >= 8 ? 2 : 1, Math.floor(n / 4)))

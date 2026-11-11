@@ -539,3 +539,4 @@ details.ex>summary b::before{content:none}
 .g-numgrid td:nth-child(2),.g-numgrid td:nth-child(4){width:26px;border:none;background:none;color:#e5533d}
 .g-row4{direction:ltr;display:flex;justify-content:center;gap:4px;flex-wrap:nowrap}.g-row4 .g-cell svg{width:62px;height:62px}
 .g-mat3{direction:ltr;display:grid;grid-template-columns:repeat(3,64px);gap:4px;justify-content:center;margin:6px auto}
+.g-how{font-size:.98rem;line-height:1.55;background:#fff8e1;border:1px solid #f3d27a;border-radius:10px;padding:8px 10px;margin:6px 0 8px;text-align:right;color:#4a3b00}

@@ -136,7 +136,7 @@ function startPractice(t: GType | 'mixed'): void {
 }
 function itemHtml(it: GItem): string {
   fbItem = it
-  return `<div class="qcard gcard"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${it.prompt ?? GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div>
+  return `<div class="qcard gcard"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${it.prompt ?? GTYPE_META[it.type].promptHe}</div>${it.how ? `<div class="g-how">💡 ${it.how}</div>` : ''}<div class="g-stem">${it.stem}</div>
   <div class="opt-grid g-opts">${it.options.map((o, i) => `<button type="button" class="opt g-opt" data-i="${i}"><span class="g-letter">${'אבגד'[i]}.</span> <span class="g-optbody">${o}</span></button>`).join('')}</div></div>
   <button type="button" class="fb-btn" id="fbBtn">💬 פידבק על השאלה</button><p class="fb-note">השאלה מועתקת (בלי התשובה), ואז פותחים את קבוצת הוואטסאפ ומדביקים.</p>`
 }
@@ -344,7 +344,7 @@ function card(r: ExerciseLog): string {
       const tags = [...tries.map((n) => `<span class="ex-tag ${ok ? 'good' : 'bad'}">ניסיון ${n}</span>`), ok ? '<span class="ex-tag key">✓ התשובה הנכונה</span>' : ''].join('')
       return `<div class="opt ex-opt${ok ? ' is-key' : ''}${tries.length && !ok ? ' is-wrong' : ''}"><span class="g-letter">${L[k]}.</span> <span class="g-optbody">${o}</span><div class="ex-tags">${tags}</div></div>`
     }).join('')
-    body = `<div class="qcard gcard ex-q"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${it.prompt ?? GTYPE_META[it.type].promptHe}</div><div class="g-stem">${it.stem}</div><div class="opt-grid g-opts">${opts}</div></div>`
+    body = `<div class="qcard gcard ex-q"><div class="name-badge">${GTYPE_META[it.type].title}</div><div class="prompt">${it.prompt ?? GTYPE_META[it.type].promptHe}</div>${it.how ? `<div class="g-how">💡 ${it.how}</div>` : ''}<div class="g-stem">${it.stem}</div><div class="opt-grid g-opts">${opts}</div></div>`
   } else body = '<p class="note">התרגיל הזה כבר לא נמצא במאגר.</p>'
   const res = r.outcome === 'first' ? 'נכון מיד' : r.outcome === 'solved' ? `נפתר בניסיון ${r.attempts}` : 'לא נפתר אחרי 3 ניסיונות'
   return `<details class="log-row c ex ${r.outcome}"><summary class="lr-top"><span class="ex-t"><b>${title}</b><span class="ex-open">👁 לראות את התרגיל המלא</span><span class="ex-close">▲ סגירה</span></span><small>${tm}</small></summary>
