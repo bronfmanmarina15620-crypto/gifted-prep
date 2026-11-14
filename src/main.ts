@@ -204,7 +204,7 @@ function stopTimer(): void { if (timerId) clearInterval(timerId); timerId = unde
 function startExam(): void {
   const seen: Record<string, number> = {}
   for (const r of data.log) seen[r.itemId] = (seen[r.itemId] ?? 0) + 1
-  exam = EXAM_ORDER.map((t) => { const it = pickExamChapter(t, EXAM_N, seen); return { type: t, items: it, ans: it.map(() => null), start: 0, ms: it.map(() => 0) } })
+  exam = EXAM_ORDER.map((t) => { const it = pickExamChapter(t, EXAM_N, seen, data.log); return { type: t, items: it, ans: it.map(() => null), start: 0, ms: it.map(() => 0) } })
   ec = 0; eq = 0; ephase = 'intro'; go('exam')
 }
 const left = () => Math.max(0, EXAM_CHAPTER_MS - (Date.now() - exam[ec].start))

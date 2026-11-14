@@ -922,7 +922,14 @@ export const GIFTED_TIPS: Record<GType, string> = {
 }
 
 /** Exam chapter: easy→hard ordering (3 easy, 4 medium, 3 hard when available). */
-export function pickExamChapter(type: GType, n = 10, seen?: Record<string, number>): GItem[] {
+export function pickExamChapter(type: GType, n = 10, seen?: Record<string, number>, log?: GLogRow[], now = Date.now()): GItem[] {
+  // Same 5 parts, 10 questions each, 3 easy / 4 medium / 3 hard, as before.
+  // Inside the part: weak / little-practised sub-types are chosen more often, unseen questions first.
+  if (!log) return pickExamChapterOld(type, n, seen)
+  countFormats(log)
+  return pickWeighted(log, now, { n, types: [type], diffs: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3] }).sort((a, b) => a.diff - b.diff)
+}
+export function pickExamChapterOld(type: GType, n = 10, seen?: Record<string, number>): GItem[] {
   // one item per format in turn (least-seen format first), levels spread 3 easy / 4 medium / 3 hard
   const pool = GIFTED_BANK.filter((it) => it.type === type && !it.retired)
   const fseen = new Map<string, number>()
@@ -1037,12 +1044,82 @@ function pickForType(type: GType, st: Record<string, ItemState>, lvl: number, n:
   }
   return out.slice(0, n)
 }
+// ---------- v6: adaptive choice by sub-type (the "kinds" shown on the parent screen) ----------
+// Every sub-type gets a weight from THIS device's log (its last 20 answers):
+//   weak (low first-try rate)  -> high weight
+//   few answers so far         -> extra boost ("need data")
+//   strong (>=85% first-try with >=10 answers) -> small weight, still appears for maintenance
+// The weight belongs to the sub-type, not to its number of questions, so a big bank does not dominate.
+export const ADAPT_LAST = 20
+export type KindStat = { n: number; first: number }
+export function kindStatsFromLog(log: GLogRow[], now = Date.now()): Record<string, KindStat> {
+  // the last ADAPT_LAST answers of each sub-type (any age), so a strong sub-type that is now shown
+  // rarely keeps its "strong" status instead of looking like "no data" again
+  const out: Record<string, KindStat> = {}
+  const rows = log.filter((r) => r.type?.startsWith('g:') && r.at <= now).sort((a, b) => b.at - a.at)
+  for (const r of rows) {
+    const k = kindOf(r.itemId); const x = (out[k] ||= { n: 0, first: 0 })
+    if (x.n >= ADAPT_LAST) continue
+    x.n++; if (r.outcome === 'first') x.first++
+  }
+  return out
+}
+export function kindWeight(s: KindStat | undefined): number {
+  const n = s?.n ?? 0, first = s?.first ?? 0
+  if (n >= 10 && first / n >= 0.85) return 0.25 // strong: maintenance only
+  const p = (first + 0.6) / (n + 1) // smoothed first-try rate (no data -> 0.6)
+  const needData = n < 8 ? 0.6 * (1 - n / 8) : 0
+  return 0.2 + 4 * (1 - p) ** 2 + needData
+}
+/** Best next question inside one sub-type: due re-try → due check → unseen (near level) → oldest seen. */
+function pickInKind(pool: GItem[], st: Record<string, ItemState>, lvl: number, wantDiff?: number): GItem | undefined {
+  const oldest = (a: GItem, b: GItem) => st[a.id].last - st[b.id].last
+  const target = wantDiff ?? lvl
+  for (const k of ['fail', 'check'] as const) { const x = pool.filter((it) => st[it.id]?.kind === k).sort(oldest); if (x.length && wantDiff === undefined) return x[0] }
+  // least-practised layout (format) inside the sub-type first, then the level closest to the child's
+  const unseen = shuffled(pool.filter((it) => !st[it.id])).sort((a, b) => (FMT_SEEN.get(formatOf(a.id)) ?? 0) - (FMT_SEEN.get(formatOf(b.id)) ?? 0) || Math.abs(a.diff - target) - Math.abs(b.diff - target))
+  if (unseen.length && (wantDiff === undefined || unseen[0].diff === wantDiff)) return unseen[0]
+  if (wantDiff !== undefined) { const same = pool.filter((it) => it.diff === wantDiff).sort((a, b) => (st[a.id]?.last ?? 0) - (st[b.id]?.last ?? 0)); if (same.length) return same[0]; if (unseen.length) return unseen[0] }
+  for (const k of ['fail', 'check', 'wait', 'retired'] as const) { const x = pool.filter((it) => st[it.id]?.kind === k).sort(oldest); if (x.length) return x[0] }
+  return undefined
+}
+type WeightedOpts = { n: number; types: GType[]; diffs?: number[]; rand?: () => number }
+function pickWeighted(log: GLogRow[], now: number, o: WeightedOpts): GItem[] {
+  const st = itemStates(log, now)
+  const stats = kindStatsFromLog(log, now)
+  const rand = o.rand ?? Math.random
+  const byKind = new Map<string, GItem[]>()
+  for (const it of GIFTED_BANK) if (!it.retired && o.types.includes(it.type)) { const k = kindOf(it.id); if (!byKind.has(k)) byKind.set(k, []); byKind.get(k)!.push(it) }
+  const lvl: Record<string, number> = {}
+  for (const t of o.types) lvl[t] = typeLevel(log, t)
+  // no sub-type takes over a whole session (a part with only 2 sub-types, like sentences, may fill up)
+  const cap = Math.max(2, Math.ceil(o.n / 4), Math.ceil(o.n / Math.max(1, byKind.size)))
+  const used = new Map<string, number>(), taken = new Set<string>(), out: GItem[] = []
+  while (out.length < o.n) {
+    const ks = [...byKind.keys()].filter((k) => (used.get(k) ?? 0) < cap && byKind.get(k)!.some((it) => !taken.has(it.id)))
+    if (!ks.length) break
+    const want = o.diffs?.[out.length]
+    const w = ks.map((k) => kindWeight(stats[k]) * 0.55 ** (used.get(k) ?? 0) * (want === undefined || byKind.get(k)!.some((it) => !taken.has(it.id) && it.diff === want) ? 1 : 0.1))
+    let x = rand() * w.reduce((a, b) => a + b, 0), i = 0
+    while (i < ks.length - 1 && (x -= w[i]) > 0) i++
+    const k = ks[i], pool = byKind.get(k)!.filter((it) => !taken.has(it.id))
+    const it = pickInKind(pool, st, lvl[pool[0].type], want)
+    if (!it) { byKind.delete(k); continue }
+    out.push(it); taken.add(it.id); used.set(k, (used.get(k) ?? 0) + 1)
+  }
+  return out
+}
 export function pickSession(type: GType | 'mixed', log: GLogRow[], n = 12, now = Date.now()): GItem[] {
+  countFormats(log)
+  const types = type === 'mixed' ? GTYPES : [type]
+  return pickWeighted(log, now, { n, types }).sort((a, b) => a.diff - b.diff)
+}
+/** v5 picker kept for comparison in tests/adaptive-sim.mts */
+export function pickSessionOld(type: GType | 'mixed', log: GLogRow[], n = 12, now = Date.now()): GItem[] {
   const st = itemStates(log, now)
   countFormats(log)
   if (type !== 'mixed') return pickForType(type, st, typeLevel(log, type), n, new Set()).sort((a, b) => a.diff - b.diff)
   const types: GType[] = ['analogy', 'sentence', 'word', 'numshape', 'figural']
-  // more slots for the types that have more formats (numbers in shapes, shapes)
   const share: Record<GType, number> = { analogy: 2, sentence: 2, word: 2, numshape: 3, figural: 3 }
   const per = Math.max(...Object.values(share)) * Math.ceil(n / 12)
   const taken = new Set<string>()
