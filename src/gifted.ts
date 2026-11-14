@@ -1,5 +1,6 @@
 import { buildMore } from './gifted_more'
 import { buildOfficial } from './gifted_official'
+import { buildExtra } from './gifted_extra'
 /** Original Hebrew item bank for gifted stage-B style practice — all items written for this project. */
 
 export type GType = 'analogy' | 'sentence' | 'word' | 'numshape' | 'figural'
@@ -832,6 +833,7 @@ export const GIFTED_BANK: GItem[] = [
   ...buildNumShapes2(),
   ...buildMore({ pack, rng, nums }),
   ...buildOfficial({ pack, rng, nums }),
+  ...buildExtra({ pack, rng, nums }),
 ]
 
 // ---------- v5: one clear instruction per format (what to look for, not the rule) ----------
@@ -869,6 +871,8 @@ export const FORMAT_HOW: Record<string, { prompt?: string; how: string }> = {
   fp: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, fq: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, fx: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F },
   pd: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F }, pc: { prompt: 'מה הצורה הבאה בשורה?', how: HOW_SERIES_F },
 }
+for (const [nw, old] of [['ah', 'ag'], ['sd', 'se'], ['nh', 'nr'], ['nj', 'nx'], ['ny', 'nz'], ['pf', 'pb']] as const) FORMAT_HOW[nw] = FORMAT_HOW[old]
+FORMAT_HOW.nk = { prompt: 'איזה מספר חסר בעיגול?', how: 'המספר שבריבוע יוצא בחץ שמאלה ובחץ ימינה. החץ השמאלי עושה תמיד אותו חשבון עם המספר שבריבוע (למשל מוסיף לו מספר, או כופל אותו), וגם החץ הימני עושה תמיד חשבון משלו. בדקו בשתי השורות הראשונות מה עושה כל חץ, והשלימו את השורה השלישית.' }
 // questions the wide solver (tests/solver_all.py) found with more than one fitting option: never picked again
 const RETIRED = new Set(['na1', 'na3', 'na4', 'po23'])
 for (const it of GIFTED_BANK) {

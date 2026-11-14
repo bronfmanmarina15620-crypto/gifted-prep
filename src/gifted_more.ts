@@ -131,11 +131,13 @@ export const SC: [string, string, string[]][] = [
   ['כדי לשמור על השיניים, ___ אותן פעמיים ב___.', 'מצחצחים / יום', ['מצחצחים / שנה', 'שוברים / יום', 'צובעים / שבוע']],
 ]
 
-const SEEN = new Set<string>()
-function keepUnique(items: GItem[], n: number, prefix: string): GItem[] {
+export const SEEN = new Set<string>()
+export function keepUnique(items: GItem[], n: number, prefix: string): GItem[] {
   const out: GItem[] = []
   for (const it of items) {
-    const sig = it.stem + '|' + [...it.options].sort().join('|')
+    // drawings: compare without the one-line instruction (it is replaced later), stories: full text
+    const stem = it.type === 'numshape' || it.type === 'figural' ? it.stem.replace(/<div class="g-sent">[^<]*<\/div>/g, '') : it.stem
+    const sig = stem + '|' + [...it.options].sort().join('|')
     if (SEEN.has(sig) || new Set(it.options).size !== 4) continue
     SEEN.add(sig); it.id = prefix + out.length; out.push(it)
     if (out.length === n) break
@@ -184,7 +186,7 @@ function buildWordQ(h: H): GItem[] {
 }
 
 // clockwise ring of numbers
-function ringSvg(vals: (number | null)[]): string {
+export function ringSvg(vals: (number | null)[]): string {
   const n = vals.length, c = 90, R = 62
   let s = `<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="#aab" stroke-width="2" stroke-dasharray="4 4"/>`
   vals.forEach((v, i) => {

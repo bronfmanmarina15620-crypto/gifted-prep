@@ -98,8 +98,8 @@ const tree = (cx: number, top: number | string, l: number | string, rr: number |
   `<line x1="${cx + 10}" y1="44" x2="${cx + 26}" y2="70" stroke="${INK}" stroke-width="2"/><polygon points="${cx + 30},${66} ${cx + 28},${76} ${cx + 21},${70}" fill="${INK}"/>` +
   `<circle cx="${cx - 32}" cy="94" r="19" fill="#fff" stroke="${INK}" stroke-width="2"/>${T(cx - 32, 94, l, 15)}<circle cx="${cx + 32}" cy="94" r="19" fill="#fff" stroke="${INK}" stroke-width="2"/>${T(cx + 32, 94, rr, 15)}`
 
-function buildBranch(h: H): GItem[] {
-  const r = h.rng(7404), ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1))
+export function buildBranch(h: H, seed = 7404, prefix = 'pb', count = 36): GItem[] {
+  const r = h.rng(seed), ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1))
   const out: GItem[] = []
   for (let t = 0; t < 8000 && out.length < 300; t++) {
     const d = ([1, 2, 3] as D[])[t % 3]
@@ -120,7 +120,7 @@ function buildBranch(h: H): GItem[] {
       h.nums(right, [...others.slice(0, 3), right + xs[2]]), `עיגול מתפצל: ${xs.join(',')} (${g1.t} , ${g2.t})`, r, d))
     void g
   }
-  return finish(out, 36, 'pb', 'nbranch', 'איזה מספר חסר בעיגול?')
+  return finish(out, count, prefix, 'nbranch', 'איזה מספר חסר בעיגול?')
 }
 
 // ---------- 4b. pyramid made of small triangles ----------

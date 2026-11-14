@@ -115,9 +115,11 @@ def consistent(p, v, it):
         return fits1([(a, l) for a, l, r in rows]) and fits1([(a, r) for a, l, r in rows])
     return _orig(p, v, it)
 
+ALIAS = {'nh': 'nr', 'nj': 'nx', 'ny': 'nz', 'nk': 'na', 'pf': 'pb'}  # v7 prefixes use the same layouts
 bad, total, per = [], 0, {}
 for it in B:
     p = re.sub(r'\d+[a-c]?$', '', it['id'])
+    p = ALIAS.get(p, p)
     if it['type'] != 'numshape' or (ONLY and p not in ONLY) or it.get('retired'): continue
     ok_opts = []
     for i, o in enumerate(it['options']):
